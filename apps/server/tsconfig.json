@@ -1,0 +1,17 @@
+{
+  "extends": "@repo/tsconfig/node.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*",
+    "scripts/**/*",
+    "tsup.config.ts",
+    "package.json"
+  ],
+  "exclude": ["node_modules", "test-limit.ts"]
+}

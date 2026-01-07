@@ -1,0 +1,42 @@
+{
+  "name": "@repo/shared",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.mjs",
+      "require": "./dist/common/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.mjs",
+      "require": "./dist/node/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.mjs",
+      "require": "./dist/browser/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": ["./dist/common/index.d.ts"],
+      "node": ["./dist/node/index.d.ts"],
+      "browser": ["./dist/browser/index.d.ts"]
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "@repo/tsconfig": "workspace:*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

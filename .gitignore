@@ -1,0 +1,16 @@
+.idea
+.vscode
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.log*
+
+**/node_modules
+.env
+**/dist
+apps/server/prisma/migrations
+apps/server/prisma/db
