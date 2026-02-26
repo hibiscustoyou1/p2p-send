@@ -5,7 +5,7 @@
       <!-- Logo -->
       <router-link to="/" class="flex flex-col cursor-pointer hover:opacity-80 transition-opacity outline-none">
         <div class="flex items-center gap-2 mb-1">
-          <span class="material-symbols-outlined text-primary text-3xl">share_reviews</span>
+          <SvgIcon name="share_reviews" class="text-primary text-3xl" />
           <h1 class="text-slate-900 dark:text-white text-xl font-bold tracking-tight">P2P 共享</h1>
         </div>
         <p class="text-slate-500 dark:text-slate-400 text-xs font-medium pl-1">安全控制台</p>
@@ -17,7 +17,7 @@
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           exact-active-class="active-nav text-primary rounded-r-xl"
           :class="[$route.path === '/' ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
-          <span class="material-symbols-outlined" :class="$route.path === '/' ? 'fill-current' : ''">swap_horiz</span>
+          <SvgIcon name="swap_horiz" :class="$route.path === '/' ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">传输</span>
         </router-link>
 
@@ -25,8 +25,7 @@
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           active-class="active-nav text-primary rounded-r-xl"
           :class="[$route.path.startsWith('/history') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
-          <span class="material-symbols-outlined"
-            :class="$route.path.startsWith('/history') ? 'fill-current' : ''">history</span>
+          <SvgIcon name="history" :class="$route.path.startsWith('/history') ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">历史记录</span>
         </router-link>
 
@@ -34,8 +33,7 @@
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           active-class="active-nav text-primary rounded-r-xl"
           :class="[$route.path.startsWith('/devices') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
-          <span class="material-symbols-outlined"
-            :class="$route.path.startsWith('/devices') ? 'fill-current' : ''">devices</span>
+          <SvgIcon name="devices" :class="$route.path.startsWith('/devices') ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">设备</span>
         </router-link>
       </nav>
@@ -45,7 +43,7 @@
     <div class="p-6 flex flex-col gap-2">
       <button
         class="flex w-full items-center justify-center gap-2 rounded-xl h-10 bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all text-sm font-bold border border-primary/20 outline-none">
-        <span class="material-symbols-outlined text-sm">add_link</span>
+        <SvgIcon name="add_link" class="text-sm" />
         <span>快速链接</span>
       </button>
 
@@ -54,14 +52,13 @@
           class="flex items-center gap-3 px-3 py-2 transition-colors cursor-pointer outline-none"
           active-class="active-nav text-primary rounded-r-xl"
           :class="[$route.path.startsWith('/settings') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl']">
-          <span class="material-symbols-outlined"
-            :class="$route.path.startsWith('/settings') ? 'fill-current' : ''">settings</span>
+          <SvgIcon name="settings" :class="$route.path.startsWith('/settings') ? 'fill-current' : ''" />
           <span class="text-sm font-medium">设置</span>
         </router-link>
 
         <button @click="toggleTheme"
           class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full text-left outline-none">
-          <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+          <SvgIcon :name="isDarkMode ? 'light_mode' : 'dark_mode'" />
           <span class="text-sm font-medium">切换主题</span>
         </button>
       </div>
@@ -83,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue';
+import SvgIcon from '@/components/common/SvgIcon.vue';
 
 // 初始状态尝试根据 localStorage 获取，否则默认走系统首选项
 const getInitialTheme = () => {
