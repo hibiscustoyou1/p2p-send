@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P2P 共享 - 历史记录</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+    
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3B82F6",
+                        "primary-dark": "#2563EB",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0F172A", 
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1E293B",
+                        "surface-darker": "#020617",
+                        "accent-success": "#10B981",
+                        "accent-warning": "#F59E0B",
+                        "accent-error": "#EF4444",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1rem",
+                        full: "9999px",
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                    }
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        [v-cloak] { display: none; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155; 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        /* Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .active-nav {
+            background: rgba(59, 130, 246, 0.15);
+            border-left: 3px solid #3B82F6;
+        }
+        
+        /* View transition animation */
+        .fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex overflow-hidden transition-colors duration-300">
+    <div id="app" class="flex w-full h-screen" v-cloak>
+        
+        <!-- 左侧菜单栏 -->
+        <aside class="w-64 flex-shrink-0 flex flex-col justify-between bg-white dark:bg-surface-darker border-r border-slate-200 dark:border-slate-800 z-20 transition-colors duration-300">
+            <div class="flex flex-col gap-6 p-6">
+                <!-- Logo -->
+                <a href="transfer.html" class="flex flex-col cursor-pointer hover:opacity-80 transition-opacity">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-primary text-3xl">share_reviews</span>
+                        <h1 class="text-slate-900 dark:text-white text-xl font-bold tracking-tight">P2P 共享</h1>
+                    </div>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs font-medium pl-1">安全控制台</p>
+                </a>
+                
+                <!-- 主导航 -->
+                <nav class="flex flex-col gap-2 mt-4">
+                    <a href="transfer.html" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group">
+                        <span class="material-symbols-outlined">swap_horiz</span>
+                        <span class="text-sm font-semibold">传输</span>
+                    </a>
+                    <a href="history.html" class="active-nav text-primary rounded-r-xl flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group">
+                        <span class="material-symbols-outlined fill-current">history</span>
+                        <span class="text-sm font-semibold">历史记录</span>
+                    </a>
+                    <a href="devices.html" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group">
+                        <span class="material-symbols-outlined">devices</span>
+                        <span class="text-sm font-semibold">设备</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- 底部操作与用户区 -->
+            <div class="p-6 flex flex-col gap-2">
+                <button class="flex w-full items-center justify-center gap-2 rounded-xl h-10 bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all text-sm font-bold border border-primary/20">
+                    <span class="material-symbols-outlined text-sm">add_link</span>
+                    <span>快速链接</span>
+                </button>
+                
+                <div class="mt-4 border-t border-slate-200 dark:border-slate-800 pt-4 flex flex-col gap-1">
+                    <a href="settings.html" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3 px-3 py-2 rounded-xl transition-colors cursor-pointer">
+                        <span class="material-symbols-outlined">settings</span>
+                        <span class="text-sm font-medium">设置</span>
+                    </a>
+                    <button @click="toggleTheme" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full text-left">
+                        <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+                        <span class="text-sm font-medium">切换主题</span>
+                    </button>
+                </div>
+                
+                <!-- 用户信息 -->
+                <div class="mt-2 flex items-center gap-3 px-3 pt-2">
+                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-primary/20">
+                        JD
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm text-slate-900 dark:text-white font-medium">John Doe</span>
+                        <span class="text-xs text-slate-500">专业版</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧主内容区 -->
+        <main class="flex-1 relative flex flex-col min-h-screen overflow-y-auto">
+            
+            <!-- 全局氛围光效背景 (仅作视觉点缀) -->
+            <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                <div class="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[100px] dark:blur-[120px] transition-all duration-700"></div>
+                <div class="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-purple-600/5 dark:bg-purple-600/10 rounded-full blur-[100px] transition-all duration-700"></div>
+            </div>
+
+            <!-- 历史记录视图 -->
+            <div class="relative z-10 p-8 w-full max-w-6xl mx-auto flex flex-col gap-6 fade-in h-full">
+                <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex flex-col">
+                        <h2 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">传输历史</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">管理和追踪您的文件活动</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative group">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+                            <input class="pl-10 pr-4 py-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64 lg:w-80 placeholder:text-slate-400 text-slate-700 dark:text-slate-200 shadow-sm" placeholder="搜索文件或设备..." type="text"/>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-soft flex flex-col items-start gap-4">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">cloud_upload</span>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">本月</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">45.2 GB</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">总发送量</p>
+                        </div>
+                    </div>
+                    <div class="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-soft flex flex-col items-start gap-4">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="h-10 w-10 rounded-xl bg-purple-50 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                <span class="material-symbols-outlined">cloud_download</span>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">本月</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">128.5 GB</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">总接收量</p>
+                        </div>
+                    </div>
+                    <div class="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-soft flex flex-col items-start gap-4">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                                <span class="material-symbols-outlined">speed</span>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">平均</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">24 MB/s</p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">传输速度</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 列表控制栏 -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-2 bg-white dark:bg-surface-dark p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
+                        <button class="px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold shadow-sm whitespace-nowrap">全部</button>
+                        <button class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已发送</button>
+                        <button class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已接收</button>
+                        <button class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已失败</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            筛选
+                        </button>
+                        <button class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">download</span>
+                            导出
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 数据表格 -->
+                <div class="bg-white dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex-1">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                                    <th class="py-4 pl-6 pr-4 font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 w-[35%]">文件名</th>
+                                    <th class="py-4 px-4 font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 w-[15%]">大小</th>
+                                    <th class="py-4 px-4 font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 w-[20%]">详情</th>
+                                    <th class="py-4 px-4 font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 w-[15%]">日期</th>
+                                    <th class="py-4 pl-4 pr-6 font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 w-[15%] text-right">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                <!-- 项 1 -->
+                                <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td class="py-4 pl-6 pr-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="h-10 w-10 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined">picture_as_pdf</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">第三季度财务报告.pdf</p>
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">文档</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">45 MB</span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                <span class="material-symbols-outlined text-[14px] text-slate-400">arrow_forward</span>
+                                                发送至: MacBook-Pro
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-88392</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">今天</span>
+                                            <span class="text-xs text-slate-400">14:30</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 pl-4 pr-6 text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                            已完成
+                                        </span>
+                                    </td>
+                                </tr>
+                                <!-- 项 2 -->
+                                <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td class="py-4 pl-6 pr-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="h-10 w-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined">movie</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">假期视频.mp4</p>
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">视频</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">1.2 GB</span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                <span class="material-symbols-outlined text-[14px] text-slate-400">arrow_back</span>
+                                                来自: iPhone-13
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-88341</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">昨天</span>
+                                            <span class="text-xs text-slate-400">18:20</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 pl-4 pr-6 text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                            已完成
+                                        </span>
+                                    </td>
+                                </tr>
+                                <!-- 项 3 -->
+                                <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td class="py-4 pl-6 pr-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="h-10 w-10 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined">folder_zip</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">项目备份.zip</p>
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">压缩包</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">850 MB</span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                <span class="material-symbols-outlined text-[14px] text-slate-400">arrow_forward</span>
+                                                发送至: Office-Desktop
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-87102</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">10月24日</span>
+                                            <span class="text-xs text-slate-400">09:15</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 pl-4 pr-6 text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20">
+                                            已失败
+                                        </span>
+                                    </td>
+                                </tr>
+                                <!-- 项 4 -->
+                                <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td class="py-4 pl-6 pr-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-primary flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined">image</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">个人头像.png</p>
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">图片</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="text-sm font-medium text-slate-600 dark:text-slate-300">2 MB</span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                <span class="material-symbols-outlined text-[14px] text-slate-400">arrow_back</span>
+                                                来自: Sarah-Tablet
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-86553</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">10月23日</span>
+                                            <span class="text-xs text-slate-400">11:45</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 pl-4 pr-6 text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20">
+                                            已取消
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 分页 -->
+                    <div class="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">显示第 1-4 项，共 24 项</span>
+                        <div class="flex items-center gap-2">
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50" disabled>
+                                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                            </button>
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-medium shadow-md shadow-primary/30">1</button>
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium transition-colors">2</button>
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium transition-colors">3</button>
+                            <button class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const isDarkMode = ref(true);
+                const toggleTheme = () => {
+                    isDarkMode.value = !isDarkMode.value;
+                    if (isDarkMode.value) {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('theme', 'light');
+                    }
+                };
+
+                onMounted(() => {
+                    const savedTheme = localStorage.getItem('theme');
+                    if (savedTheme) {
+                        isDarkMode.value = savedTheme === 'dark';
+                    } else if (window.matchMedia) {
+                        isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    }
+                    
+                    if(isDarkMode.value) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                });
+
+                return { isDarkMode, toggleTheme }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
