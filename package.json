@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "install:all": "pnpm i -r && pnpm build:shared",
-    "dev": "pnpm --filter './apps/*' --parallel dev",
-    "build": "pnpm clean && pnpm build:shared && pnpm --filter './apps/*' --parallel build",
+    "dev": "pnpm --filter \"./apps/*\" --parallel dev",
+    "build": "pnpm clean && pnpm build:shared && pnpm --filter \"./apps/*\" --parallel build",
     "build:shared": "pnpm --filter @repo/shared build",
     "clean": "rimraf dist apps/*/dist packages/*/dist",
     "start": "cd dist && node server/index.js",

@@ -4,7 +4,7 @@ import { helloRouter } from './hello.routes';
 
 const routes = Router();
 
-routes.use('/api', helloRouter);
+routes.use('/api/hello', helloRouter);
 
 export const initRoutes = (app: Express) => {
   app.use(routes);

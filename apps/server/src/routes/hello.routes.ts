@@ -3,6 +3,6 @@ import { getHello } from '@/controllers/hello.controller';
 
 const router = Router();
 
-router.get('/hello', getHello);
+router.get('/', getHello);
 
 export const helloRouter = router;
