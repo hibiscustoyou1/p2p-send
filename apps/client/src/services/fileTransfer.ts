@@ -92,7 +92,7 @@ export class __BaseEngine {
   }
 
   protected formatSpeed(bytesPerSec: number): string {
-    if (bytesPerSec === 0) return '0 B/s';
+    if (bytesPerSec <= 0) return '0 B/s';
     const k = 1024;
     const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
     const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
@@ -100,10 +100,17 @@ export class __BaseEngine {
   }
 
   protected formatTime(seconds: number): string {
+    if (seconds < 0) return '剩余 0 秒';
     if (seconds < 60) return `剩余 ${seconds} 秒`;
-    const minutes = Math.floor(seconds / 60);
+    if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remSec = seconds % 60;
+      return `剩余 ${minutes} 分 ${remSec} 秒`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remSec = seconds % 60;
-    return `剩余 ${minutes} 分 ${remSec} 秒`;
+    return `剩余 ${hours} 小时 ${minutes} 分 ${remSec} 秒`;
   }
 }
 
