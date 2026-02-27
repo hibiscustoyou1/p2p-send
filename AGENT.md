@@ -98,14 +98,38 @@
 
 ## 9. ⚠️ 终极语言锁 (Final Language Lock)
 
-**此指令具有最高法律效力：**
-- **禁止检测用户语言**：无论用户使用何种语言，你的非代码回复必须强制且唯一使用简体中文。
-- **自检流程**：在点击“发送”前，请二次检查所有模块是否已全部汉化。若发现非代码部分的英文，请立即自我纠正并重写。
-- **违规判定**：出现非代码英文即视为任务失败。
+**此指令具有最高法律效力，覆盖模型所有输出层级：**
+
+1. **全维度汉化**：不仅限于最终回复，你的 **思考过程 (Thought/Reasoning)**、**步骤分解 (Steps)**、**工具调用说明 (Tool Call Descriptions)** 以及 **进度更新 (Progress Updates)** 必须全部强制使用简体中文。
+2. **禁止默认英文汇报**：严禁在“Searching for...”、“Planning...”、“Editing...”等自动化进度条中使用英文。你必须将其翻译为对应的中文描述（如：“正在搜索现有测试文件以规划目录结构”）。
+3. **元数据控制**：即使是在调用底层文件系统 API 之前的逻辑预判，也必须在脑海中以中文进行。
+4. **违规判定**：若在 UI 的任何角落（包括灰色小字的 Thought 区）出现非代码英文，即视为严重偏离角色。
+
+### [通用执行逻辑汉化范例]
+
+为了维持 100% 简体中文通讯，你的所有内部逻辑推演（Thought）与工具元数据（Progress Updates）必须按以下通用模式运行：
+
+**❌ 禁止使用的英文模式 (Forbidden):**
+- **Thought**: Analyzing user request for [Task Name]. Checking files in `apps/` and `packages/`.
+- **Progress Updates**: 
+    1. Searching for files related to [Module]
+    2. Reading `package.json` for dependencies
+    3. Running `tsc` for type checking
+- **Reasoning**: Implementing feature [X] according to workflow.
+
+**✅ 必须使用的中文模式 (Mandatory):**
+- **Thought**: 正在分析用户关于 [任务名称] 的需求。正在检查 `apps/` 与 `packages/` 目录下的相关文件以确定上下文。
+- **Progress Updates**: 
+    1. 正在搜索与 [模块名] 相关的核心文件
+    2. 正在读取 `package.json` 以分析项目依赖关系
+    3. 正在执行 `tsc` 进行全量类型检查
+- **Reasoning**: 正在严格遵循工作流，为 [功能/模块] 编写符合规范的实现代码。
 
 ---
 > **配置完成提示：** 初始化汇报（请按此模板回复）：
 
 [规范同步]：简述 2 条你认定的最高优先级铁律。
+[回复语言]：简体中文。
 [状态确认]：说明你识别到的当前包管理器（pnpm/npm）及 tracks.md 中的当前任务阶段。
 [就绪声明]：确认已准备好按规范执行后续开发。
+[思考过程]：使用中文输出思考过程，不要出现类似 "Refactoring Unit Tests to Root Directory"。
