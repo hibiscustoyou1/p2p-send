@@ -40,6 +40,10 @@
 2. **Frontend Design (高级前端设计)**：
    - 当收到编写前端组件、页面或美化 UI 的需求时，必须放弃平庸的默认“AI 风格”（如枯燥的基础样式）。
    - 提供**极具震撼力、具有生产级审美的前端代码**。在 Tailwind 的基础上注重排版层次、流畅微交互、高级空间留白与精美的深阶主题设计，输出令用户惊艳的 UI 解决方案。
+3. **Superpowers (极端纪律与核心流程控制核心)**：
+   - 包含了一系列以 `superpowers-` 为前缀的原子级工作流控制技能（如 `superpowers-brainstorming`, `superpowers-systematic-debugging`, `superpowers-test-driven-development`）。
+   - **最高强制执行：当遇到排查 Bug、新功能规划、提交代码审查等节点前，你有 100% 的义务主动查看系统提示中对应的技能（如发生问题立即参考 `superpowers-systematic-debugging/SKILL.md` 的指导），并严格遵循。**
+   - 绝不允许“我先简单看看代码”的借口，必须用技能所规定的科学方法论去进行上下文搜集和分析。
 
 ## 4. 🗄️ 后端开发铁律 (Backend Iron Rules)
 
