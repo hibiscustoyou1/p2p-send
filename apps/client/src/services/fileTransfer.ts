@@ -135,11 +135,22 @@ export class TransferEngine extends __BaseEngine {
     this.lastReportTime = Date.now();
     this.lastReportBytes = this.offset;
 
+    const start = () => {
+      // 修复核心：在发送切片前，必须先发元数据与对面握手对接，否则对面不知道这是什么文件以及大小
+      this.channel!.send(JSON.stringify({
+        type: 'metadata',
+        filename: this.file.name,
+        totalBytes: this.file.size
+      }));
+      // 握手包发送完毕后，进入分片传输循环
+      this.readNextChunk();
+    };
+
     // 如果通道没开，等待开打
     if (this.channel.readyState === 'open') {
-      this.readNextChunk();
+      start();
     } else {
-      this.channel.onopen = () => this.readNextChunk();
+      this.channel.onopen = start;
     }
   }
 
