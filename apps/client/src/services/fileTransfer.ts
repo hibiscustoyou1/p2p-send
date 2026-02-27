@@ -1,3 +1,5 @@
+import { historyService, type TransferStatus as DBTransferStatus } from './db';
+
 export type TransferStatus = 'transferring' | 'paused' | 'error' | 'completed';
 
 export interface TransferProgress {
@@ -13,6 +15,7 @@ export type ProgressCallback = (progress: TransferProgress) => void;
 
 interface EngineConfig {
   chunkSize?: number; // 默认 64KB, WebRTC 最佳实践
+  peerName?: string;  // 对端设备名称
 }
 
 export class __BaseEngine {
@@ -26,6 +29,10 @@ export class __BaseEngine {
   protected lastReportBytes: number = 0;
   protected speedHistory: number[] = [];
 
+  // 保存写盘所需的元祖数据
+  protected peerName: string;
+  protected filename: string = '';
+
   // 必须由子类决定
   public totalBytes: number = 0;
 
@@ -33,7 +40,9 @@ export class __BaseEngine {
     this.id = id;
     this.config = {
       chunkSize: config?.chunkSize || 64 * 1024,
+      peerName: config?.peerName || 'Unknown Device',
     };
+    this.peerName = this.config.peerName;
   }
 
   public on(event: 'progress', callback: ProgressCallback) {
@@ -43,6 +52,31 @@ export class __BaseEngine {
   public cancel() {
     this.status = 'error';
     this.reportProgress();
+    // 不再这里写死存盘，留给子类具体判定是 send 还是 receive
+  }
+
+  /**
+   * 落盘历史记录，映射状态并处理静默异常
+   */
+  protected async saveToHistory(type: 'send' | 'receive') {
+    if (!this.filename) return;
+
+    let dbStatus: DBTransferStatus = 'failed';
+    if (this.status === 'completed') dbStatus = 'success';
+
+    try {
+      await historyService.addRecord({
+        id: this.id,
+        filename: this.filename,
+        size: this.totalBytes,
+        type,
+        status: dbStatus,
+        peerName: this.peerName,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.error('Failed to save transfer history to DB:', err);
+    }
   }
 
   protected reportProgress() {
@@ -125,7 +159,13 @@ export class TransferEngine extends __BaseEngine {
   constructor(file: File, id: string, config?: EngineConfig) {
     super(id, config);
     this.file = file;
+    this.filename = file.name;
     this.totalBytes = file.size;
+  }
+
+  public cancel() {
+    super.cancel();
+    this.saveToHistory('send');
   }
 
   // 开始发送逻辑，需要传入 WebRTC 的通道
@@ -179,6 +219,7 @@ export class TransferEngine extends __BaseEngine {
       this.status = 'completed';
       this.offset = this.file.size;
       this.reportProgress();
+      this.saveToHistory('send');
       return;
     }
 
@@ -208,16 +249,19 @@ export class TransferEngine extends __BaseEngine {
         } else {
           this.status = 'error';
           this.reportProgress();
+          this.saveToHistory('send');
         }
       } catch (err) {
         console.error('DataChannel buffer 出错', err);
         this.status = 'error';
         this.reportProgress();
+        this.saveToHistory('send');
       }
     };
     reader.onerror = () => {
       this.status = 'error';
       this.reportProgress();
+      this.saveToHistory('send');
     };
     reader.readAsArrayBuffer(chunk);
   }
@@ -232,10 +276,15 @@ export class FileReceiverEngine extends __BaseEngine {
   private receiveBuffer: ArrayBuffer[] = [];
   public completedFile?: File;
 
-  constructor(id: string, filename: string, totalBytes: number) {
-    super(id, { chunkSize: 64 * 1024 });
+  constructor(id: string, filename: string, totalBytes: number, config?: EngineConfig) {
+    super(id, { ...config, chunkSize: 64 * 1024 });
     this.filename = filename;
     this.totalBytes = totalBytes;
+  }
+
+  public cancel() {
+    super.cancel();
+    this.saveToHistory('receive');
   }
 
   public updateProgress(chunk: ArrayBuffer) {
@@ -249,6 +298,7 @@ export class FileReceiverEngine extends __BaseEngine {
     if (this.offset >= this.totalBytes) {
       this.status = 'completed';
       this.reportProgress();
+      this.saveToHistory('receive');
 
       // 重组 File (生产环境应使用 FileSystem Access API 落盘以节省内存，这里为了简单起见先转 Blob)
       const blob = new Blob(this.receiveBuffer);

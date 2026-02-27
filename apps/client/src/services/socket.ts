@@ -10,10 +10,12 @@ import type {
   ErrorPayload
 } from '@repo/shared';
 
+declare const API_PORT: string;
+
 // 单例模式，保证全局唯一的信令通道
 class SignalingService {
   private socket: Socket | null = null;
-  private serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+  private serverUrl = `http://localhost:${API_PORT}`;
   public roomId: string | null = null;
   public role: 'sender' | 'receiver' | null = null;
   public peerId: string | null = null;

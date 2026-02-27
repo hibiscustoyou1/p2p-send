@@ -41,7 +41,7 @@
               class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">本月</span>
           </div>
           <div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">45.2 GB</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatSize(totalSentBytes) }}</p>
             <p class="text-sm text-slate-500 dark:text-slate-400">总发送量</p>
           </div>
         </div>
@@ -56,7 +56,7 @@
               class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">本月</span>
           </div>
           <div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">128.5 GB</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatSize(totalReceivedBytes) }}</p>
             <p class="text-sm text-slate-500 dark:text-slate-400">总接收量</p>
           </div>
         </div>
@@ -71,7 +71,7 @@
               class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">平均</span>
           </div>
           <div>
-            <p class="text-2xl font-bold text-slate-900 dark:text-white">24 MB/s</p>
+            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ avgSpeed }}</p>
             <p class="text-sm text-slate-500 dark:text-slate-400">传输速度</p>
           </div>
         </div>
@@ -81,14 +81,22 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div
           class="flex items-center gap-2 bg-white dark:bg-surface-dark p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
-          <button
-            class="px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold shadow-sm whitespace-nowrap">全部</button>
-          <button
-            class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已发送</button>
-          <button
-            class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已接收</button>
-          <button
-            class="px-4 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 text-sm font-medium transition-colors whitespace-nowrap">已失败</button>
+          <button @click="currentFilter = 'all'" :class="[
+            'px-4 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap',
+            currentFilter === 'all' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 font-medium'
+          ]">全部</button>
+          <button @click="currentFilter = 'send'" :class="[
+            'px-4 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap',
+            currentFilter === 'send' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 font-medium'
+          ]">已发送</button>
+          <button @click="currentFilter = 'receive'" :class="[
+            'px-4 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap',
+            currentFilter === 'receive' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 font-medium'
+          ]">已接收</button>
+          <button @click="currentFilter = 'failed'" :class="[
+            'px-4 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap',
+            currentFilter === 'failed' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 font-medium'
+          ]">已失败</button>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -129,173 +137,63 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-
-              <!-- 项 1 -->
-              <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <tr v-for="record in paginatedRecords" :key="record.id"
+                class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <td class="py-4 pl-6 pr-4">
                   <div class="flex items-center gap-4">
                     <div
-                      class="h-10 w-10 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
-                      <SvgIcon name="picture_as_pdf" class="text-xl" />
+                      :class="`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${getIconForFile(record.filename).bg} ${getIconForFile(record.filename).color}`">
+                      <SvgIcon :name="getIconForFile(record.filename).name" class="text-xl" />
                     </div>
                     <div>
-                      <p
-                        class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">
-                        第三季度财务报告.pdf</p>
-                      <p class="text-xs text-slate-500 dark:text-slate-400">文档</p>
+                      <p class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer truncate max-w-[200px]"
+                        :title="record.filename">
+                        {{ record.filename }}</p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 uppercase">{{
+                        record.filename.split('.').pop() || 'FILE' }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="py-4 px-4">
-                  <span class="text-sm font-medium text-slate-600 dark:text-slate-300">45 MB</span>
+                  <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ formatSize(record.size)
+                  }}</span>
                 </td>
                 <td class="py-4 px-4">
                   <div class="flex flex-col">
                     <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <SvgIcon name="arrow_forward" class="text-[14px] text-slate-400" />
-                      发送至: MacBook-Pro
+                      <SvgIcon :name="record.type === 'send' ? 'arrow_forward' : 'arrow_back'"
+                        class="text-[14px] text-slate-400" />
+                      {{ record.type === 'send' ? '发送至' : '来自' }}: {{ record.peerName }}
                     </div>
-                    <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-88392</span>
+                    <span class="text-[10px] text-slate-400 mt-0.5" :title="record.id">ID: #{{
+                      record.id.split('-')[0]?.toUpperCase() }}</span>
                   </div>
                 </td>
                 <td class="py-4 px-4">
                   <div class="flex flex-col">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">今天</span>
-                    <span class="text-xs text-slate-400">14:30</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ formatDate(record.timestamp)
+                    }}</span>
+                    <span class="text-xs text-slate-400">{{ formatTime(record.timestamp) }}</span>
                   </div>
                 </td>
                 <td class="py-4 pl-4 pr-6 text-right">
-                  <span
+                  <span v-if="record.status === 'success'"
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                     已完成
                   </span>
-                </td>
-              </tr>
-
-              <!-- 项 2 -->
-              <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <td class="py-4 pl-6 pr-4">
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="h-10 w-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
-                      <SvgIcon name="video_file" class="text-xl" />
-                    </div>
-                    <div>
-                      <p
-                        class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">
-                        假期视频.mp4</p>
-                      <p class="text-xs text-slate-500 dark:text-slate-400">视频</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <span class="text-sm font-medium text-slate-600 dark:text-slate-300">1.2 GB</span>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <SvgIcon name="arrow_back" class="text-[14px] text-slate-400" />
-                      来自: iPhone-13
-                    </div>
-                    <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-88341</span>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">昨天</span>
-                    <span class="text-xs text-slate-400">18:20</span>
-                  </div>
-                </td>
-                <td class="py-4 pl-4 pr-6 text-right">
-                  <span
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                    已完成
-                  </span>
-                </td>
-              </tr>
-
-              <!-- 项 3 -->
-              <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <td class="py-4 pl-6 pr-4">
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="h-10 w-10 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
-                      <SvgIcon name="folder_zip" class="text-xl" />
-                    </div>
-                    <div>
-                      <p
-                        class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">
-                        项目备份.zip</p>
-                      <p class="text-xs text-slate-500 dark:text-slate-400">压缩包</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <span class="text-sm font-medium text-slate-600 dark:text-slate-300">850 MB</span>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <SvgIcon name="arrow_forward" class="text-[14px] text-slate-400" />
-                      发送至: Office-Desktop
-                    </div>
-                    <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-87102</span>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">10月24日</span>
-                    <span class="text-xs text-slate-400">09:15</span>
-                  </div>
-                </td>
-                <td class="py-4 pl-4 pr-6 text-right">
-                  <span
+                  <span v-else-if="record.status === 'failed'"
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20">
                     已失败
                   </span>
-                </td>
-              </tr>
-
-              <!-- 项 4 -->
-              <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <td class="py-4 pl-6 pr-4">
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-primary flex items-center justify-center shrink-0">
-                      <SvgIcon name="image" class="text-xl" />
-                    </div>
-                    <div>
-                      <p
-                        class="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors cursor-pointer">
-                        个人头像.png</p>
-                      <p class="text-xs text-slate-500 dark:text-slate-400">图片</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <span class="text-sm font-medium text-slate-600 dark:text-slate-300">2 MB</span>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <SvgIcon name="arrow_back" class="text-[14px] text-slate-400" />
-                      来自: Sarah-Tablet
-                    </div>
-                    <span class="text-[10px] text-slate-400 mt-0.5">ID: #TR-86553</span>
-                  </div>
-                </td>
-                <td class="py-4 px-4">
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">10月23日</span>
-                    <span class="text-xs text-slate-400">11:45</span>
-                  </div>
-                </td>
-                <td class="py-4 pl-4 pr-6 text-right">
-                  <span
+                  <span v-else-if="record.status === 'cancelled'"
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20">
                     已取消
                   </span>
                 </td>
+              </tr>
+              <!-- default empty fallback -->
+              <tr v-if="filteredRecords.length === 0">
+                <td colspan="5" class="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">暂无匹配的传输历史记录</td>
               </tr>
             </tbody>
           </table>
@@ -304,21 +202,25 @@
         <!-- 分页 -->
         <div
           class="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-          <span class="text-sm text-slate-500 dark:text-slate-400">显示第 1-4 项，共 24 项</span>
+          <span class="text-sm text-slate-500 dark:text-slate-400">
+            显示第 {{ filteredRecords.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0 }}-{{ Math.min(currentPage *
+              itemsPerPage, filteredRecords.length) }} 项，共 {{ filteredRecords.length }} 项
+          </span>
           <div class="flex items-center gap-2">
-            <button
-              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
-              disabled>
+            <button @click="currentPage > 1 && currentPage--" :disabled="currentPage <= 1"
+              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
               <SvgIcon name="chevron_left" class="text-[18px]" />
             </button>
-            <button
-              class="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-medium shadow-md shadow-primary/30">1</button>
-            <button
-              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium transition-colors">2</button>
-            <button
-              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium transition-colors">3</button>
-            <button
-              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            <button v-for="page in totalPages" :key="page" @click="currentPage = page" :class="[
+              'h-8 w-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors',
+              currentPage === page
+                ? 'bg-primary text-white shadow-md shadow-primary/30'
+                : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+            ]">
+              {{ page }}
+            </button>
+            <button @click="currentPage < totalPages && currentPage++" :disabled="currentPage >= totalPages"
+              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
               <SvgIcon name="chevron_right" class="text-[18px]" />
             </button>
           </div>
@@ -329,7 +231,97 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import { historyService, type TransferRecord } from '@/services/db';
+
+const records = ref<TransferRecord[]>([]);
+const currentFilter = ref<'all' | 'send' | 'receive' | 'failed'>('all');
+
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = 8;
+
+onMounted(async () => {
+  records.value = await historyService.getAllRecords();
+});
+
+// 计算统计值
+const totalSentBytes = computed(() => {
+  return records.value
+    .filter(r => r.type === 'send' && r.status === 'success')
+    .reduce((sum, r) => sum + r.size, 0);
+});
+
+const totalReceivedBytes = computed(() => {
+  return records.value
+    .filter(r => r.type === 'receive' && r.status === 'success')
+    .reduce((sum, r) => sum + r.size, 0);
+});
+
+const avgSpeed = computed(() => {
+  return records.value.length > 0 ? '极速' : '---';
+});
+
+// 计算过滤后数据
+const filteredRecords = computed(() => {
+  let list = records.value;
+  if (currentFilter.value === 'send') list = list.filter(r => r.type === 'send');
+  else if (currentFilter.value === 'receive') list = list.filter(r => r.type === 'receive');
+  else if (currentFilter.value === 'failed') list = list.filter(r => r.status === 'failed' || r.status === 'cancelled');
+  return list;
+});
+
+// 当过滤器改变，重置页数
+watch(currentFilter, () => {
+  currentPage.value = 1;
+});
+
+// 分页数据截取
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / itemsPerPage)));
+const paginatedRecords = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return filteredRecords.value.slice(start, start + itemsPerPage);
+});
+
+// 辅助方法
+const formatSize = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatDate = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+
+  const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  if (isToday) return '今天';
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+  if (isYesterday) return '昨天';
+
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+};
+
+const formatTime = (timestamp: number) => {
+  return new Date(timestamp).toTimeString().substring(0, 5);
+};
+
+const getIconForFile = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'pdf': return { name: 'picture_as_pdf', bg: 'bg-red-50 dark:bg-red-500/10', color: 'text-red-500' };
+    case 'mp4': case 'mov': case 'avi': return { name: 'video_file', bg: 'bg-purple-50 dark:bg-purple-500/10', color: 'text-purple-500' };
+    case 'zip': case 'rar': case '7z': return { name: 'folder_zip', bg: 'bg-orange-50 dark:bg-orange-500/10', color: 'text-orange-500' };
+    case 'jpg': case 'jpeg': case 'png': case 'gif': return { name: 'image', bg: 'bg-blue-50 dark:bg-blue-500/10', color: 'text-primary' };
+    default: return { name: 'insert_drive_file', bg: 'bg-slate-50 dark:bg-slate-500/10', color: 'text-slate-500' };
+  }
+};
 </script>
 
 <style scoped>

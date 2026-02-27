@@ -10,6 +10,9 @@ loadSecureEnv(PROJECT_ROOT);
 export default defineConfig(() => {
   const API_PORT = process.env.PORT || 3000;
   return {
+    define: {
+      API_PORT: JSON.stringify(API_PORT)
+    },
     plugins: [
       vue(),
       createSvgIconsPlugin({
