@@ -4,8 +4,24 @@
     <!-- 连接面板子组件 -->
     <ConnectionPanel :deviceCode="deviceCode" @connect="onConnect" />
 
-    <!-- 拖拽上传子组件 -->
-    <UploadZone @files-selected="onFilesSelected" />
+    <!-- 状态面板 (连接建立后显示) -->
+    <div v-if="connectionStatus !== 'disconnected'" class="glass-panel p-4 rounded-xl flex items-center justify-between">
+       <div class="flex items-center gap-3">
+         <div :class="[
+           'h-3 w-3 rounded-full shadow-lg',
+           connectionStatus === 'connected' ? 'bg-accent-success shadow-accent-success/50' : 'bg-accent-warning shadow-accent-warning/50 animate-pulse'
+         ]"></div>
+         <span class="text-slate-700 dark:text-slate-300 font-medium">
+            {{ connectionStatus === 'connected' ? '与对端设备连接成功，可以开始传输体验！' : '正在建立安全 P2P 隧道...' }}
+         </span>
+       </div>
+       <div class="text-sm px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-slate-500 font-mono shadow-inner">
+           Role: {{ currentRole }}
+       </div>
+    </div>
+
+    <!-- 拖拽上传子组件 (建联成功，或者是作为发送方时才能操作) -->
+    <UploadZone v-if="connectionStatus === 'connected' && currentRole === 'sender'" @files-selected="onFilesSelected" />
 
     <!-- 活动传输列表渲染 (如果没有任务则不展示) -->
     <TransferList v-if="transferTasks.length > 0" :activeCount="activeCount" @view-all="onViewAll">
@@ -18,65 +34,166 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import ConnectionPanel from '@/components/transfer/ConnectionPanel.vue';
 import UploadZone from '@/components/transfer/UploadZone.vue';
 import TransferList from '@/components/transfer/TransferList.vue';
 import TransferCard from '@/components/transfer/TransferCard.vue';
-import { TransferEngine, type TransferProgress } from '@/services/fileTransfer';
+import { TransferEngine, FileReceiverEngine, type TransferProgress, type __BaseEngine } from '@/services/fileTransfer';
+import { signalingService } from '@/services/socket';
+import { WebRTCManager } from '@/services/webrtc';
 
-// ========== 连接区域状态 Mock ==========
-const deviceCode = ref('782 914');
+// ========== 连接区域状态 ==========
+const deviceCode = ref('');
+const connectionStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
+const currentRole = ref<'sender' | 'receiver'>('sender');
 
-const onConnect = (code: string) => {
-  // 模拟处理连接动作
-  console.log('[Mock Action] 连接对端设备:', code);
-  alert(`尝试连接代码: ${code}`);
+let webrtcManager: WebRTCManager | null = null;
+let activeReceiver: FileReceiverEngine | null = null;
+
+onMounted(async () => {
+  // 生成随机 6 位分享码让本端作为发送者
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  deviceCode.value = code;
+  
+  try {
+    await signalingService.connect();
+    await signalingService.joinRoom(code, 'sender');
+    currentRole.value = 'sender';
+    initWebRTCManager('sender');
+  } catch (err) {
+    console.error('初始化信令错误', err);
+  }
+});
+
+const initWebRTCManager = (role: 'sender' | 'receiver') => {
+  if (webrtcManager) webrtcManager.close();
+
+  webrtcManager = new WebRTCManager(role);
+  
+  webrtcManager.on('stateChange', (state) => {
+     if (state === 'connected') connectionStatus.value = 'connected';
+     else if (state === 'connecting' || state === 'new') connectionStatus.value = 'connecting';
+     else connectionStatus.value = 'disconnected';
+  });
+
+  webrtcManager.on('dataChannelOpen', (channel) => {
+     connectionStatus.value = 'connected';
+     
+     // 挂载数据通道监听，只有接收者会用到
+     channel.onmessage = (event) => {
+         // 元数据握手层
+         if (typeof event.data === 'string') {
+             try {
+                const meta = JSON.parse(event.data);
+                if (meta.type === 'metadata') {
+                   // 启动接收引擎
+                   const id = Math.random().toString(36).substring(2, 9);
+                   activeReceiver = new FileReceiverEngine(id, meta.filename, meta.totalBytes);
+                   
+                   transferTasks.value.unshift({
+                     id,
+                     filename: activeReceiver.filename,
+                     totalBytes: activeReceiver.totalBytes,
+                     transferredBytes: 0,
+                     speed: '握手中...',
+                     estimatedTime: '初始化...',
+                     status: 'transferring',
+                     engine: activeReceiver
+                   });
+
+                   activeReceiver.on('progress', (progress) => {
+                     const existTask = transferTasks.value.find(t => t.id === progress.id);
+                     if (existTask) Object.assign(existTask, progress);
+                   });
+                }
+             } catch (e) {
+                console.error('Metadata Parse Error', e);
+             }
+         } 
+         // 纯二进制接收层
+         else if (event.data instanceof ArrayBuffer) {
+             if (activeReceiver) {
+                activeReceiver.updateProgress(event.data);
+             }
+         }
+     };
+  });
+
+  webrtcManager.init();
+
+  // 当对面（不管是接收人还是发送人）加入房间引爆 PEER 事件时
+  signalingService.onPeerJoined((payload) => {
+     if (currentRole.value === 'sender') {
+        // 如果我们是发件人，且收到了收件人的加入通知，则由我们弹射发起 WEBRTC Call
+        webrtcManager!.call();
+     }
+  });
+  
+  signalingService.onPeerLeft(() => {
+     connectionStatus.value = 'disconnected';
+  });
 };
+
+const onConnect = async (code: string) => {
+  if (!code || code === deviceCode.value) return;
+
+  try {
+    // 离开自己作为 sender 的房间，去加别人的房间作为 receiver
+    signalingService.leaveRoom(deviceCode.value);
+    await signalingService.joinRoom(code, 'receiver');
+    
+    currentRole.value = 'receiver';
+    connectionStatus.value = 'connecting';
+    deviceCode.value = code; // 同步当前锁定的连接码
+    
+    initWebRTCManager('receiver');
+  } catch (err: any) {
+    alert(`连接失败: ${err.message}`);
+    // 连接失败复原回原本页面状态 （需重新刷新逻辑这先从简略过）
+  }
+};
+
 
 // ========== 文件传输队列引擎管理 ==========
 interface TransferTaskModel extends TransferProgress {
   filename: string;
-  engine: TransferEngine;
+  engine: __BaseEngine;
 }
 
 const transferTasks = ref<TransferTaskModel[]>([]);
-
-// 计算正在活动的任务数量
 const activeCount = computed(() => transferTasks.value.filter(t => t.status === 'transferring').length);
 
 const onFilesSelected = (files: FileList | File[]) => {
+  if (currentRole.value !== 'sender' || !webrtcManager) return;
+  const channel = webrtcManager.getChannel();
+  if (!channel || channel.readyState !== 'open') {
+      alert('数据通道未建立，请等待对方连接完毕再投递。');
+      return;
+  }
+
   Array.from(files).forEach(file => {
     const id = Math.random().toString(36).substring(2, 9);
-
-    // 创建独立切片引擎实体
     const engine = new TransferEngine(file, id);
 
-    // 推入初始状态
     transferTasks.value.unshift({
       id,
       filename: file.name,
       totalBytes: file.size,
       transferredBytes: 0,
-      speed: '测速中...',
+      speed: '准备中...',
       estimatedTime: '计算中...',
       status: 'transferring',
       engine
     });
 
-    // 侦听其实时触发推流，原地通过代理修改 UI 状态
     engine.on('progress', (progress) => {
       const existTask = transferTasks.value.find(t => t.id === progress.id);
-      if (existTask) {
-        existTask.transferredBytes = progress.transferredBytes;
-        existTask.speed = progress.speed;
-        existTask.estimatedTime = progress.estimatedTime;
-        existTask.status = progress.status;
-      }
+      if (existTask) Object.assign(existTask, progress);
     });
 
-    // 挂载发动引擎
-    engine.start();
+    // 开始以通道推送数据
+    engine.startWithChannel(channel);
   });
 };
 
@@ -87,24 +204,24 @@ const onViewAll = () => {
 
 const handlePause = (id: string) => {
   const task = transferTasks.value.find(t => t.id === id);
-  if (task) task.engine.pause();
+  if (task && task.engine instanceof TransferEngine) task.engine.pause();
 };
 
 const handleResume = (id: string) => {
   const task = transferTasks.value.find(t => t.id === id);
-  if (task) task.engine.resume();
+  if (task && task.engine instanceof TransferEngine) task.engine.resume();
 };
 
 const handleCancel = (id: string) => {
   const task = transferTasks.value.find(t => t.id === id);
   if (task) task.engine.cancel();
-  // 真正的取消或删除（直接在列表抹去）
   transferTasks.value = transferTasks.value.filter(t => t.id !== id);
 };
 
-// 安全卸载：组件销毁时停止背后所有的定时器引擎
 onUnmounted(() => {
   transferTasks.value.forEach(task => task.engine.cancel());
+  if (webrtcManager) webrtcManager.close();
+  signalingService.disconnect();
 });
 </script>
 
