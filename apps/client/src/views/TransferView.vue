@@ -53,16 +53,18 @@ const currentRole = ref<'sender' | 'receiver'>('sender');
 let webrtcManager: WebRTCManager | null = null;
 let activeReceiver: FileReceiverEngine | null = null;
 
+const handleAuthVerified = (payload: any) => {
+  deviceCode.value = payload.staticId;
+  currentRole.value = 'sender'; // 我们目前在自己界面就是待机发送者
+  signalingService.joinRoom(payload.staticId.replace(/\s+/g, ''), 'sender').catch(err => console.error(err));
+  initWebRTCManager('sender');
+};
+
 onMounted(async () => {
   // 阶段四：清空原先纯前端的自增房管，完全听令于大厅发号系统
   try {
     // 优雅接听，直接用 services/socket.ts 暴露的方法去注册
-    signalingService.onAuthVerified((payload) => {
-      deviceCode.value = payload.staticId;
-      currentRole.value = 'sender'; // 我们目前在自己界面就是待机发送者
-      signalingService.joinRoom(payload.staticId.replace(/\s+/g, ''), 'sender').catch(err => console.error(err));
-      initWebRTCManager('sender');
-    });
+    signalingService.onAuthVerified(handleAuthVerified);
 
     await signalingService.connect();
 
@@ -237,7 +239,11 @@ const handleCancel = (id: string) => {
 onUnmounted(() => {
   transferTasks.value.forEach(task => task.engine.cancel());
   if (webrtcManager) webrtcManager.close();
-  signalingService.disconnect();
+  if (signalingService.roomId) {
+    signalingService.leaveRoom(signalingService.roomId);
+  }
+  signalingService.offAuthVerified(handleAuthVerified);
+  // 不在此调用 disconnect()，保留该单态在其他界面的共享在线状态
 });
 </script>
 

@@ -17,7 +17,8 @@ describe('SignalingService - Subscription Handlers', () => {
     // (这里不再真实联网，只是用一个 Mock socket 替代它被实例出来的动作)
     signalingService.socket = {
       on: vi.fn(),
-      off: vi.fn()
+      off: vi.fn(),
+      disconnect: vi.fn()
     } as any;
 
     // 我们要求在实际连接成功、或者在重新绑定时，能够把之前的事件补绑上去
@@ -34,5 +35,22 @@ describe('SignalingService - Subscription Handlers', () => {
     // 我们手工向内部暴露的 Mock 发出指令，看外部是否接到了
     const mockSocket = signalingService.socket as any;
     expect(mockSocket.on).toHaveBeenCalledWith(SocketEvent.AUTH_VERIFIED, callback);
+  });
+  it('[TDD] should immediately return cached auth payload on re-subscribing (Routing Bugfix)', () => {
+    // Arrange: 第一次拿到了验证通过
+    signalingService.authPayload = { staticId: '200 123', myDeviceId: 'dev-x-1' } as any;
+
+    const newCallback = vi.fn();
+
+    // Act: 模拟 Vue 路由切回，组件重挂载再次要求监听
+    signalingService.onAuthVerified(newCallback);
+
+    // Assert: 因为有 authPayload 缓存，它应该被同步（立刻）回调，而不需要等网络新包裹
+    expect(newCallback).toHaveBeenCalledWith({ staticId: '200 123', myDeviceId: 'dev-x-1' });
+
+    // 附带验证销毁监听逻辑
+    signalingService.socket = { on: vi.fn(), off: vi.fn(), disconnect: vi.fn() } as any;
+    signalingService.offAuthVerified(newCallback);
+    expect(signalingService.socket!.off).toHaveBeenCalledWith(SocketEvent.AUTH_VERIFIED, newCallback);
   });
 });

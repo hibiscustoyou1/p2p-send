@@ -9,7 +9,8 @@ import type {
   PeerJoinedPayload,
   ErrorPayload,
   DeviceOnlineCheckPayload,
-  DeviceStatusChangedPayload
+  DeviceStatusChangedPayload,
+  AuthVerifiedPayload
 } from '@repo/shared';
 import { settingsManager } from './settingsManager';
 
@@ -35,6 +36,7 @@ class SignalingService {
   public role: 'sender' | 'receiver' | null = null;
   public peerId: string | null = null;
   private queuedListeners: Array<{ event: string, callback: any }> = [];
+  public authPayload: AuthVerifiedPayload | null = null;
 
   /**
    * 建立与服务端的 Socket.io 链接
@@ -64,6 +66,11 @@ class SignalingService {
           if (this.connectErrorCallback) {
             this.connectErrorCallback(err);
           }
+        });
+
+        // 内部静默截获一次鉴权响应以供单例生命周期缓存
+        this.socket.on(SocketEvent.AUTH_VERIFIED, (payload: AuthVerifiedPayload) => {
+          this.authPayload = payload;
         });
 
         this._applyQueuedListeners();
@@ -109,6 +116,7 @@ class SignalingService {
       this.socket = null;
     }
     this.queuedListeners = [];
+    this.authPayload = null;
   }
 
   /**
@@ -227,11 +235,23 @@ class SignalingService {
 
   // --- 阶段四：私有号段发放钩子 ---
   public onAuthVerified(callback: (payload: any) => void) {
+    if (this.authPayload) {
+      // 已经连接并获取过 ID 时直接无感回传缓存供视图复建
+      callback(this.authPayload);
+    }
     if (!this.socket) {
       this.queuedListeners.push({ event: SocketEvent.AUTH_VERIFIED, callback });
       return;
     }
     this.socket.on(SocketEvent.AUTH_VERIFIED, callback);
+  }
+
+  public offAuthVerified(callback: (payload: any) => void) {
+    if (!this.socket) {
+      this.queuedListeners = this.queuedListeners.filter(q => q.event !== SocketEvent.AUTH_VERIFIED || q.callback !== callback);
+      return;
+    }
+    this.socket.off(SocketEvent.AUTH_VERIFIED, callback);
   }
 
   // --- 阶段三：长效通信大厅 ---
