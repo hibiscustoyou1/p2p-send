@@ -2,14 +2,19 @@
   <component :is="layoutComponent">
     <router-view />
   </component>
+  <AuthGuardModal :isVisible="showAuthGuard" @success="handleAuthSuccess" />
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import MainLayout from '@/components/layout/MainLayout.vue';
+import AuthGuardModal from '@/components/common/AuthGuardModal.vue';
+import { signalingService } from '@/services/socket';
+import { settingsManager } from '@/services/settingsManager';
 
 const route = useRoute();
+const showAuthGuard = ref(false);
 
 const layoutComponent = computed(() => {
   if (route.meta.layout === 'MainLayout') {
@@ -17,6 +22,29 @@ const layoutComponent = computed(() => {
   }
   return 'div'; // Fallback 无布局
 });
+
+onMounted(() => {
+  // 设置并应用暗黑/白日主题
+  settingsManager.applyCurrentTheme();
+
+  // 添加基于全局认证墙的心跳错误捕捉
+  const errorHandler = (err: any) => {
+    if (err.message === 'Authentication error' || err.message === 'Invalid token') {
+      showAuthGuard.value = true;
+    }
+  };
+
+  // 对于可能被拒接的入口予以监控
+  signalingService.onConnectError(errorHandler);
+});
+
+onUnmounted(() => {
+  signalingService.onConnectError(() => {});
+});
+
+const handleAuthSuccess = () => {
+  showAuthGuard.value = false;
+};
 </script>
 
 <style>

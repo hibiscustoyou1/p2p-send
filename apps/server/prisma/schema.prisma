@@ -13,3 +13,13 @@ model Temp {
   value     String
   createdAt DateTime @default(now())
 }
+
+// ============== 阶段四：私有源端发号器 ==============
+model DeviceRecord {
+  id        String   @id @default(cuid())
+  uuid      String   @unique // 前端浏览器的物理指纹
+  staticId  Int      @unique // 分配到的永久 6 位数字号码 ( >= 100000 )
+  alias     String?          // 历史记录中的伪装可读名称
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

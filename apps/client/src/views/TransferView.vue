@@ -41,12 +41,12 @@ import UploadZone from '@/components/transfer/UploadZone.vue';
 import TransferList from '@/components/transfer/TransferList.vue';
 import TransferCard from '@/components/transfer/TransferCard.vue';
 import { TransferEngine, FileReceiverEngine, type TransferProgress, type __BaseEngine } from '@/services/fileTransfer';
-import { signalingService } from '@/services/socket';
+import { signalingService, getMyDeviceId } from '@/services/socket';
 import { WebRTCManager } from '@/services/webrtc';
 import { deviceManager } from '@/services/deviceManager';
 
 // ========== 连接区域状态 ==========
-const deviceCode = ref('');
+const deviceCode = ref('获 取 中 ...');
 const connectionStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
 const currentRole = ref<'sender' | 'receiver'>('sender');
 
@@ -54,17 +54,21 @@ let webrtcManager: WebRTCManager | null = null;
 let activeReceiver: FileReceiverEngine | null = null;
 
 onMounted(async () => {
-  // 生成随机 6 位分享码让本端作为发送者
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  deviceCode.value = code;
-
+  // 阶段四：清空原先纯前端的自增房管，完全听令于大厅发号系统
   try {
+    // 优雅接听，直接用 services/socket.ts 暴露的方法去注册
+    signalingService.onAuthVerified((payload) => {
+      deviceCode.value = payload.staticId;
+      currentRole.value = 'sender'; // 我们目前在自己界面就是待机发送者
+      signalingService.joinRoom(payload.staticId.replace(/\s+/g, ''), 'sender').catch(err => console.error(err));
+      initWebRTCManager('sender');
+    });
+
     await signalingService.connect();
-    await signalingService.joinRoom(code, 'sender');
-    currentRole.value = 'sender';
-    initWebRTCManager('sender');
+
   } catch (err) {
     console.error('初始化信令错误', err);
+    deviceCode.value = '连 接 失 败';
   }
 });
 

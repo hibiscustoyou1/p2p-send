@@ -1,6 +1,22 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SideBar from '../SideBar.vue';
+import { settingsManager } from '@/services/settingsManager';
+
+// 填补 jsdom 环境缺失的浏览器 API，避免 `settingsManager` 重置时报错
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 // ===============
 // TDD - GREEN Stage: 基础依赖注入
@@ -33,6 +49,7 @@ describe('SideBar Component - 基础行为与挂载', () => {
     // 恢复可能被修改的 DOM 和 LocalStorage 状态
     document.documentElement.classList.remove('dark');
     localStorage.clear();
+    settingsManager.resetToDefaults();
   });
 
   it('能成功挂载并包含应用标题 "P2P 共享"', () => {
@@ -65,16 +82,7 @@ describe('SideBar Component - 主题切换引擎', () => {
     // 每次测试前清理全局状态
     document.documentElement.classList.remove('dark');
     localStorage.clear();
-
-    // 默认 Mock 系统主题为亮色
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockImplementation((query) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-      })),
-    });
+    settingsManager.resetToDefaults();
   });
 
   afterEach(() => {
@@ -87,8 +95,8 @@ describe('SideBar Component - 主题切换引擎', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
-  it('如果存在 localStorage 的 dark 缓存，初始化应当添加 .dark 类并设置 isDarkMode', () => {
-    localStorage.setItem('theme', 'dark');
+  it('如果存在 settings 的 dark 缓存，初始化应当添加 .dark 类并设置 isDarkMode', () => {
+    settingsManager.updateSettings({ theme: 'dark' });
     createWrapper();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
@@ -105,12 +113,12 @@ describe('SideBar Component - 主题切换引擎', () => {
 
     // 断言 DOM 与缓存
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(settingsManager.getSettings().theme).toBe('dark');
 
     // 再次点击切换回亮色
     await toggleButton!.trigger('click');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('theme')).toBe('light');
+    expect(settingsManager.getSettings().theme).toBe('light');
   });
 
 });

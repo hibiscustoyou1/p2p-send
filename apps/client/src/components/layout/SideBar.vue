@@ -79,32 +79,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import { ref } from 'vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
+import { settingsManager } from '@/services/settingsManager';
 
-// 初始状态尝试根据 localStorage 获取，否则默认走系统首选项
-const getInitialTheme = () => {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme) {
-    return savedTheme === 'dark';
-  }
-  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
-const isDarkMode = ref(getInitialTheme());
+const isDarkMode = ref(settingsManager.getSettings().theme === 'dark');
 
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value;
+  settingsManager.updateSettings({ theme: isDarkMode.value ? 'dark' : 'light' });
 };
-
-// 副作用钩子，同步状态到 HTML 和 本地存储
-watchEffect(() => {
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark');
-    localStorage.setItem('theme', 'dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
-  }
-});
 </script>

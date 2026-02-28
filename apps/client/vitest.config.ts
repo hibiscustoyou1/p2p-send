@@ -4,6 +4,9 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
+  define: {
+    API_PORT: '"3030"'
+  },
   test: {
     environment: 'jsdom',
     globals: true,

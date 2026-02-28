@@ -11,8 +11,10 @@ vi.mock('@/services/socket', () => ({
     leaveRoom: vi.fn(),
     onPeerJoined: vi.fn(),
     onPeerLeft: vi.fn(),
+    onAuthVerified: vi.fn((cb) => cb({ staticId: '100 001', myDeviceId: 'dev-1' })),
     disconnect: vi.fn(),
-  }
+  },
+  getMyDeviceId: vi.fn(() => 'dev-mock-id')
 }));
 
 vi.mock('@/services/webrtc', () => {

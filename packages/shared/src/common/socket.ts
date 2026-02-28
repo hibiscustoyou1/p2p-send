@@ -21,6 +21,9 @@ export interface RTCIceCandidateInitCompat {
  * Socket.io 核心事件枚举
  */
 export enum SocketEvent {
+  // --- 阶段四私有防线：系统放行后下发自身号码 ---
+  AUTH_VERIFIED = 'AUTH_VERIFIED',
+
   // --- 客户端 -> 服务端 发出 ---
   /**
    * 客户端请求加入/创建一个房间（通过6位邀请码）
@@ -166,4 +169,13 @@ export interface DeviceOnlineCheckPayload {
 export interface DeviceStatusChangedPayload {
   deviceId: string;
   status: 'online' | 'offline';
+}
+
+/**
+ * AUTH_VERIFIED (S -> C)
+ * Backend 验证全局拦截口令通过后，结合 UUID 派发的 6 位专有身份证号
+ */
+export interface AuthVerifiedPayload {
+  staticId: string;    // 服务器派发的固定数字号码（包含空格等格式化风格）
+  myDeviceId: string;  // 即上传的 UUID，如果因清理缓存找不回，也可以以此挂历
 }

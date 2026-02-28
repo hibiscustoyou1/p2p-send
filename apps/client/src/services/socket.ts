@@ -11,6 +11,7 @@ import type {
   DeviceOnlineCheckPayload,
   DeviceStatusChangedPayload
 } from '@repo/shared';
+import { settingsManager } from './settingsManager';
 
 declare const API_PORT: string;
 
@@ -28,11 +29,12 @@ export function getMyDeviceId(): string {
 
 // 单例模式，保证全局唯一的信令通道
 class SignalingService {
-  private socket: Socket | null = null;
+  public socket: Socket | null = null;
   private serverUrl = `http://localhost:${API_PORT}`;
   public roomId: string | null = null;
   public role: 'sender' | 'receiver' | null = null;
   public peerId: string | null = null;
+  private queuedListeners: Array<{ event: string, callback: any }> = [];
 
   /**
    * 建立与服务端的 Socket.io 链接
@@ -44,18 +46,58 @@ class SignalingService {
         return;
       }
 
-      this.socket = io(this.serverUrl);
+      if (!this.socket) {
+        // 第一期建联
+        this.socket = io(this.serverUrl, {
+          auth: {
+            token: settingsManager.getAccessToken() // 护城河口令
+          },
+          query: {
+            deviceId: getMyDeviceId() // 长效标识
+          }
+        });
 
-      this.socket.on('connect', () => {
+        // 绑定全局一次性的监控分发兜底
+        this.socket.on('connect_error', (err) => {
+          console.error('[Signaling] 连接信令服务器失败:', err.message);
+          // 推送到上游门卫拦截窗
+          if (this.connectErrorCallback) {
+            this.connectErrorCallback(err);
+          }
+        });
+
+        this._applyQueuedListeners();
+      } else {
+        // 后续重连：不要重新 io() 以免丢弃其他视图绑定的事件钩子
+        (this.socket.auth as any).token = settingsManager.getAccessToken();
+        (this.socket.io.opts.query as any) = { ...(this.socket.io.opts.query || {}), deviceId: getMyDeviceId() };
+        this.socket.connect();
+      }
+
+      // 用作本次 Promise 链的临时监控
+      const onConnect = () => {
         console.log('[Signaling] 已成功连接到信令服务器', this.socket?.id);
+        cleanup();
         resolve();
-      });
-
-      this.socket.on('connect_error', (err) => {
-        console.error('[Signaling] 连接信令服务器失败:', err.message);
+      };
+      const onError = (err: Error) => {
+        cleanup();
         reject(err);
-      });
+      };
+      const cleanup = () => {
+        this.socket?.off('connect', onConnect);
+        this.socket?.off('connect_error', onError);
+      };
+
+      this.socket.on('connect', onConnect);
+      this.socket.on('connect_error', onError);
     });
+  }
+
+  // --- 提供给顶级视图 (App.vue) 拉起强制入场的 Error Hook ---
+  private connectErrorCallback: ((err: Error) => void) | null = null;
+  public onConnectError(cb: (err: Error) => void) {
+    this.connectErrorCallback = cb;
   }
 
   /**
@@ -66,6 +108,7 @@ class SignalingService {
       this.socket.disconnect();
       this.socket = null;
     }
+    this.queuedListeners = [];
   }
 
   /**
@@ -124,9 +167,21 @@ class SignalingService {
 
   // --- 订阅事件 ---
 
+  // 内部：清空并在实例化好的 socket 上补偿全部脱机挂载点
+  public _applyQueuedListeners() {
+    if (!this.socket) return;
+    for (const { event, callback } of this.queuedListeners) {
+      // 避免重复绑定，这里由于是刚实例化，一般不会重复
+      this.socket.on(event, callback);
+    }
+  }
+
   // 监听对端由于晚加入而触发的联通告知
   public onPeerJoined(callback: (payload: PeerJoinedPayload) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.PEER_JOINED, callback: (p: any) => { this.peerId = p.peerId; callback(p); } });
+      return;
+    }
     this.socket.on(SocketEvent.PEER_JOINED, (payload) => {
       this.peerId = payload.peerId;
       callback(payload);
@@ -134,7 +189,10 @@ class SignalingService {
   }
 
   public onPeerLeft(callback: (peerId: string) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.PEER_LEFT, callback: (p: any) => { if (this.peerId === p.peerId) this.peerId = null; callback(p.peerId); } });
+      return;
+    }
     this.socket.on(SocketEvent.PEER_LEFT, (payload: { peerId: string }) => {
       if (this.peerId === payload.peerId) {
         this.peerId = null;
@@ -144,18 +202,36 @@ class SignalingService {
   }
 
   public onWebRTCOffer(callback: (payload: WebRTCOfferPayload) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.WEBRTC_OFFER, callback });
+      return;
+    }
     this.socket.on(SocketEvent.WEBRTC_OFFER, callback);
   }
 
   public onWebRTCAnswer(callback: (payload: WebRTCAnswerPayload) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.WEBRTC_ANSWER, callback });
+      return;
+    }
     this.socket.on(SocketEvent.WEBRTC_ANSWER, callback);
   }
 
   public onICECandidate(callback: (payload: WebRTCICECandidatePayload) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.WEBRTC_ICE_CANDIDATE, callback });
+      return;
+    }
     this.socket.on(SocketEvent.WEBRTC_ICE_CANDIDATE, callback);
+  }
+
+  // --- 阶段四：私有号段发放钩子 ---
+  public onAuthVerified(callback: (payload: any) => void) {
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.AUTH_VERIFIED, callback });
+      return;
+    }
+    this.socket.on(SocketEvent.AUTH_VERIFIED, callback);
   }
 
   // --- 阶段三：长效通信大厅 ---
@@ -169,7 +245,10 @@ class SignalingService {
   }
 
   public onDeviceStatusChanged(callback: (payload: DeviceStatusChangedPayload) => void) {
-    if (!this.socket) return;
+    if (!this.socket) {
+      this.queuedListeners.push({ event: SocketEvent.DEVICE_STATUS_CHANGED, callback });
+      return;
+    }
     this.socket.on(SocketEvent.DEVICE_STATUS_CHANGED, callback);
   }
 
