@@ -77,7 +77,19 @@ export enum SocketEvent {
   /**
    * 通用错误提示
    */
-  ERROR = 'ERROR'
+  ERROR = 'ERROR',
+
+  // --- 阶段三设备留用管理：全双工在线状态监听 ---
+
+  /**
+   * 客户端发送给服务端：声明自己的永久 ID 并索要一篮子信任设备的在线状况
+   */
+  DEVICE_ONLINE_CHECK = 'DEVICE_ONLINE_CHECK',
+
+  /**
+   * 服务端广播给客户端：某设备的在线或离线状态变更通知
+   */
+  DEVICE_STATUS_CHANGED = 'DEVICE_STATUS_CHANGED'
 }
 
 /**
@@ -136,4 +148,22 @@ export interface PeerJoinedPayload {
 export interface ErrorPayload {
   code: string;
   message: string;
+}
+
+/**
+ * DEVICE_ONLINE_CHECK (C -> S)
+ * Client 端在上机后发送此包索要目标列表，并建立推送订阅
+ */
+export interface DeviceOnlineCheckPayload {
+  myDeviceId: string;     // 自己设备的长期唯一标符
+  targetIds: string[];    // 我关心的其它曾经信任过我的设备名册
+}
+
+/**
+ * DEVICE_STATUS_CHANGED (S -> C)
+ * Backend 路由发生设备大厅变动时，定向推给关心它的人
+ */
+export interface DeviceStatusChangedPayload {
+  deviceId: string;
+  status: 'online' | 'offline';
 }

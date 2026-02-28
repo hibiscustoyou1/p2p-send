@@ -51,7 +51,8 @@
         <template v-if="trustedDevices.length > 0">
           <DeviceCard v-for="device in trustedDevices" :key="device.id" :id="device.id"
             :name="device.alias || device.originalName" :rawId="device.id" :deviceType="device.deviceType"
-            status="offline" :subtext="'上次活跃: ' + formatTimeAgo(device.lastSeen)" @send="handleSend" @edit="handleEdit"
+            :status="onlineDeviceIds.has(device.id) ? 'online' : 'offline'"
+            :subtext="'上次活跃: ' + formatTimeAgo(device.lastSeen)" @send="handleSend" @edit="handleEdit"
             @remove="handleRemove" />
         </template>
         <!-- 没设备时的兜底槽位 -->
@@ -67,21 +68,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import DeviceCard from '@/components/devices/DeviceCard.vue';
 import { deviceManager, type TrustedDevice } from '@/services/deviceManager';
+import { signalingService } from '@/services/socket';
 
 const router = useRouter();
 const trustedDevices = ref<TrustedDevice[]>([]);
+const onlineDeviceIds = ref<Set<string>>(new Set());
 
 const loadDevices = () => {
   trustedDevices.value = deviceManager.getAllDevices();
+
+  // 向 Socket 后端触发订阅式询问
+  if (trustedDevices.value.length > 0) {
+    const targetIds = trustedDevices.value.map(d => d.id);
+    signalingService.checkDeviceOnlineStatus(targetIds);
+  }
 };
 
-onMounted(() => {
+onMounted(async () => {
   loadDevices();
+
+  // 若信令还未连接，在这里补联（针对用户直接跳页面的情况）
+  try {
+    await signalingService.connect();
+    // 注册网段变化钩子
+    signalingService.onDeviceStatusChanged((payload) => {
+      if (payload.status === 'online') {
+        onlineDeviceIds.value.add(payload.deviceId);
+      } else {
+        onlineDeviceIds.value.delete(payload.deviceId);
+      }
+    });
+  } catch (e) {
+    console.warn('Socket 离线加载受限:', e);
+  }
+});
+
+onUnmounted(() => {
+  signalingService.clearListeners();
 });
 
 const formatTimeAgo = (timestamp: number) => {

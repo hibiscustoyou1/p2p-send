@@ -7,10 +7,24 @@ import type {
   WebRTCICECandidatePayload,
   RoomJoinedPayload,
   PeerJoinedPayload,
-  ErrorPayload
+  ErrorPayload,
+  DeviceOnlineCheckPayload,
+  DeviceStatusChangedPayload
 } from '@repo/shared';
 
 declare const API_PORT: string;
+
+/**
+ * 获取或生成当前设备的长效物理指纹
+ */
+export function getMyDeviceId(): string {
+  let id = localStorage.getItem('my_device_id');
+  if (!id) {
+    id = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('my_device_id', id);
+  }
+  return id;
+}
 
 // 单例模式，保证全局唯一的信令通道
 class SignalingService {
@@ -144,6 +158,21 @@ class SignalingService {
     this.socket.on(SocketEvent.WEBRTC_ICE_CANDIDATE, callback);
   }
 
+  // --- 阶段三：长效通信大厅 ---
+  public checkDeviceOnlineStatus(targetIds: string[]) {
+    if (!this.socket) return;
+    const payload: DeviceOnlineCheckPayload = {
+      myDeviceId: getMyDeviceId(),
+      targetIds
+    };
+    this.socket.emit(SocketEvent.DEVICE_ONLINE_CHECK, payload);
+  }
+
+  public onDeviceStatusChanged(callback: (payload: DeviceStatusChangedPayload) => void) {
+    if (!this.socket) return;
+    this.socket.on(SocketEvent.DEVICE_STATUS_CHANGED, callback);
+  }
+
   // 清理所有的业务监听器防止内存泄露
   public clearListeners() {
     if (!this.socket) return;
@@ -152,6 +181,7 @@ class SignalingService {
     this.socket.off(SocketEvent.WEBRTC_OFFER);
     this.socket.off(SocketEvent.WEBRTC_ANSWER);
     this.socket.off(SocketEvent.WEBRTC_ICE_CANDIDATE);
+    this.socket.off(SocketEvent.DEVICE_STATUS_CHANGED);
   }
 }
 
