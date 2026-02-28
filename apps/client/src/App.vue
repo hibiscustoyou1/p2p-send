@@ -1,6 +1,10 @@
 <template>
   <component :is="layoutComponent">
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <keep-alive>
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
   </component>
   <AuthGuardModal :isVisible="showAuthGuard" @success="handleAuthSuccess" />
 </template>
