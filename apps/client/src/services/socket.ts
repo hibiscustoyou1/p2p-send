@@ -35,6 +35,8 @@ class SignalingService {
   public roomId: string | null = null;
   public role: 'sender' | 'receiver' | null = null;
   public peerId: string | null = null;
+  public peerStaticId: string | null = null;
+  public peerDeviceId: string | null = null; // 对端的长效 UUID（用于设备刘在线状态查询的正确主键）
   private queuedListeners: Array<{ event: string, callback: any }> = [];
   public authPayload: AuthVerifiedPayload | null = null;
 
@@ -136,6 +138,8 @@ class SignalingService {
         this.roomId = res.roomId;
         this.role = res.role;
         this.peerId = res.peerId || null;
+        this.peerStaticId = res.peerStaticId || null;
+        this.peerDeviceId = res.peerDeviceId || null;
         resolve(res);
       });
 
@@ -152,6 +156,8 @@ class SignalingService {
     this.roomId = null;
     this.role = null;
     this.peerId = null;
+    this.peerStaticId = null;
+    this.peerDeviceId = null;
   }
 
   // --- 发送/转发事件 ---
@@ -187,23 +193,26 @@ class SignalingService {
   // 监听对端由于晚加入而触发的联通告知
   public onPeerJoined(callback: (payload: PeerJoinedPayload) => void) {
     if (!this.socket) {
-      this.queuedListeners.push({ event: SocketEvent.PEER_JOINED, callback: (p: any) => { this.peerId = p.peerId; callback(p); } });
+      this.queuedListeners.push({ event: SocketEvent.PEER_JOINED, callback: (p: any) => { this.peerId = p.peerId; this.peerStaticId = p.peerStaticId || null; callback(p); } });
       return;
     }
     this.socket.on(SocketEvent.PEER_JOINED, (payload) => {
       this.peerId = payload.peerId;
+      this.peerStaticId = payload.peerStaticId || null;
+      this.peerDeviceId = payload.peerDeviceId || null;
       callback(payload);
     });
   }
 
   public onPeerLeft(callback: (peerId: string) => void) {
     if (!this.socket) {
-      this.queuedListeners.push({ event: SocketEvent.PEER_LEFT, callback: (p: any) => { if (this.peerId === p.peerId) this.peerId = null; callback(p.peerId); } });
+      this.queuedListeners.push({ event: SocketEvent.PEER_LEFT, callback: (p: any) => { if (this.peerId === p.peerId) { this.peerId = null; this.peerStaticId = null; } callback(p.peerId); } });
       return;
     }
     this.socket.on(SocketEvent.PEER_LEFT, (payload: { peerId: string }) => {
       if (this.peerId === payload.peerId) {
         this.peerId = null;
+        this.peerStaticId = null;
       }
       callback(payload.peerId);
     });

@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onActivated, onDeactivated } from 'vue';
 import { useRouter } from 'vue-router';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import DeviceCard from '@/components/devices/DeviceCard.vue';
@@ -89,13 +89,16 @@ const loadDevices = () => {
   }
 };
 
-onMounted(async () => {
+// 使用 onActivated 代替 onMounted，使 keep-alive 缓存恢复时也能重新查询在线状态
+onActivated(async () => {
+  // 每次激活时先清空上一次的在线状态缓存，避免脏数据残留
+  onlineDeviceIds.value = new Set();
   loadDevices();
 
   // 若信令还未连接，在这里补联（针对用户直接跳页面的情况）
   try {
     await signalingService.connect();
-    // 注册网段变化钩子
+    // 每次激活都需要重新注册，因为 onDeactivated 时会清除监听器
     signalingService.onDeviceStatusChanged((payload) => {
       if (payload.status === 'online') {
         onlineDeviceIds.value.add(payload.deviceId);
@@ -108,7 +111,8 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => {
+// 使用 onDeactivated 代替 onUnmounted，页面切走时解绑监听器
+onDeactivated(() => {
   signalingService.clearListeners();
 });
 

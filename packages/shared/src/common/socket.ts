@@ -134,6 +134,8 @@ export interface RoomJoinedPayload {
   roomId: string;
   role: 'sender' | 'receiver';
   peerId?: string; // 如果加入时对端已经在房间中，返回其 socket ID
+  peerStaticId?: string; // 对端的长效 6 位数号码
+  peerDeviceId?: string; // 对端的长效 UUID 指纹（用于 onlineDevices 精确查询）
   message: string;
 }
 
@@ -142,6 +144,8 @@ export interface RoomJoinedPayload {
  */
 export interface PeerJoinedPayload {
   peerId: string;
+  peerStaticId?: string;
+  peerDeviceId?: string; // 对端的长效 UUID 指纹（用于 onlineDevices 精确查询）
   role: 'sender' | 'receiver';
 }
 

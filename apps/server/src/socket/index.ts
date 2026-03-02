@@ -84,6 +84,22 @@ export function setupSocket(server: HttpServer) {
 
         const formattedStaticId = formatStaticId(record.staticId);
 
+        // 把长效短号以及设备主锁存入当前 Socket 实例内存，供后续入房时检索
+        socket.data.staticId = formattedStaticId;
+        socket.data.myDeviceId = clientUuid;
+
+        // 连接即登记在线，不依赖客户端手动打开设备页才触发 DEVICE_ONLINE_CHECK
+        onlineDevices.set(clientUuid, socket.id);
+        // 如果已有其他客户端订阅了此设备，立即广播上线通知
+        subscriptions.forEach((targetsSet, otherSocketId) => {
+          if (targetsSet.has(clientUuid)) {
+            io.to(otherSocketId).emit(SocketEvent.DEVICE_STATUS_CHANGED, {
+              deviceId: clientUuid,
+              status: 'online'
+            } as DeviceStatusChangedPayload);
+          }
+        });
+
         // 打出认证通行与长效指纹分发的最终包
         socket.emit(SocketEvent.AUTH_VERIFIED, {
           staticId: formattedStaticId,
@@ -156,10 +172,17 @@ export function setupSocket(server: HttpServer) {
 
       // 查找对端 ID
       let peerId: string | undefined;
+      let peerStaticId: string | undefined;
+
       if (room && room.size > 0) {
         for (const clientId of room) {
           if (clientId !== socket.id) {
             peerId = clientId;
+            // 拿到那个已经在房里等我们的人的 Socket 实例，翻出他的长护照
+            const peerSocket = io.sockets.sockets.get(clientId);
+            if (peerSocket) {
+              peerStaticId = peerSocket.data.staticId;
+            }
             break;
           }
         }
@@ -170,6 +193,8 @@ export function setupSocket(server: HttpServer) {
         roomId,
         role: clientType,
         peerId,
+        peerStaticId,
+        peerDeviceId: peerId ? io.sockets.sockets.get(peerId)?.data.myDeviceId : undefined,
         message: '成功加入房间',
       };
       socket.emit(SocketEvent.ROOM_JOINED, joinedPayload);
@@ -178,6 +203,8 @@ export function setupSocket(server: HttpServer) {
       if (numClients === 1 && peerId) {
         const peerJoinedPayload: PeerJoinedPayload = {
           peerId: socket.id,
+          peerStaticId: socket.data.staticId,
+          peerDeviceId: socket.data.myDeviceId,
           role: clientType
         };
         socket.to(peerId).emit(SocketEvent.PEER_JOINED, peerJoinedPayload);

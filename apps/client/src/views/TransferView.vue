@@ -82,10 +82,12 @@ const initWebRTCManager = (role: 'sender' | 'receiver') => {
   webrtcManager.on('stateChange', (state) => {
     if (state === 'connected') {
       connectionStatus.value = 'connected';
-      if (signalingService.peerId) {
+      // 使用对端的 UUID（peerDeviceId）作为唯一设备 ID，而非静态短号（peerStaticId）
+      // 原因：服务端 onlineDevices Map 以 UUID 为键，用短号查询永远 miss 导致永远离线
+      if (signalingService.peerDeviceId) {
         deviceManager.upsertDevice({
-          id: signalingService.peerId,
-          originalName: `Device ${signalingService.peerId.substring(0, 4)}`,
+          id: signalingService.peerDeviceId,
+          originalName: `Device ${signalingService.peerStaticId ?? signalingService.peerDeviceId}`,
           deviceType: 'unknown',
           lastSeen: Date.now()
         });
