@@ -12,7 +12,7 @@ vi.mock('@/services/socket', () => ({
     leaveRoom: vi.fn(),
     onPeerJoined: vi.fn(),
     onPeerLeft: vi.fn(),
-    onAuthVerified: vi.fn((cb) => cb({ staticId: '100 001', myDeviceId: 'dev-1' })),
+    onAuthVerified: vi.fn((cb) => cb({ staticId: '000001', myDeviceId: 'dev-1' })),
     offAuthVerified: vi.fn(),
     disconnect: vi.fn(),
     // 关键：需要同时模拟 peerStaticId 和 peerDeviceId

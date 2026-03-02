@@ -38,7 +38,7 @@ describe('SignalingService - Subscription Handlers', () => {
   });
   it('[TDD] should immediately return cached auth payload on re-subscribing (Routing Bugfix)', () => {
     // Arrange: 第一次拿到了验证通过
-    signalingService.authPayload = { staticId: '200 123', myDeviceId: 'dev-x-1' } as any;
+    signalingService.authPayload = { staticId: '200123', myDeviceId: 'dev-x-1' } as any;
 
     const newCallback = vi.fn();
 
@@ -46,7 +46,7 @@ describe('SignalingService - Subscription Handlers', () => {
     signalingService.onAuthVerified(newCallback);
 
     // Assert: 因为有 authPayload 缓存，它应该被同步（立刻）回调，而不需要等网络新包裹
-    expect(newCallback).toHaveBeenCalledWith({ staticId: '200 123', myDeviceId: 'dev-x-1' });
+    expect(newCallback).toHaveBeenCalledWith({ staticId: '200123', myDeviceId: 'dev-x-1' });
 
     // 附带验证销毁监听逻辑
     signalingService.socket = { on: vi.fn(), off: vi.fn(), disconnect: vi.fn() } as any;

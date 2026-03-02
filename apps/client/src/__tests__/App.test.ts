@@ -14,7 +14,7 @@ vi.mock('@/services/socket', () => ({
     leaveRoom: vi.fn(),
     onPeerJoined: vi.fn(),
     onPeerLeft: vi.fn(),
-    onAuthVerified: vi.fn((cb) => cb({ staticId: '100 001', myDeviceId: 'dev-1' })),
+    onAuthVerified: vi.fn((cb) => cb({ staticId: '000001', myDeviceId: 'dev-1' })),
     disconnect: vi.fn(),
     offAuthVerified: vi.fn(),
     roomId: '100000'

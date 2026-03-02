@@ -88,7 +88,7 @@ describe('Socket Server - Gatekeeper & Auth Routing', () => {
       const prisma = new PrismaClient();
       (prisma.deviceRecord.findUnique as any).mockResolvedValue({
         uuid: 'dev_mock_uuid',
-        staticId: 100001
+        staticId: 1
       });
 
       const client = Client(`http://localhost:${port}`, {
@@ -97,7 +97,7 @@ describe('Socket Server - Gatekeeper & Auth Routing', () => {
       });
 
       client.on(SocketEvent.AUTH_VERIFIED, (payload: AuthVerifiedPayload) => {
-        expect(payload.staticId).toBe('100 001');
+        expect(payload.staticId).toBe('000001');
         expect(payload.myDeviceId).toBe('dev_mock_uuid');
         client.close();
         resolve();

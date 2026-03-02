@@ -17,11 +17,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// ======= 工具：把 100001 格式化为 "100 001" =======
+// ======= 工具：把整数格式化为 6 位补零字符串（如 1 → "000001"）=======
 function formatStaticId(id: number): string {
-  const str = id.toString();
-  // 每 3 个数字插一个空格
-  return str.replace(/(.{3})/g, '$1 ').trim();
+  return id.toString().padStart(6, '0');
 }
 
 export function setupSocket(server: HttpServer) {
@@ -65,14 +63,13 @@ export function setupSocket(server: HttpServer) {
           where: { uuid: clientUuid }
         });
 
-        // SQLite 底座是从 0 自增，我们需要将它强行抬起到我们预设的 6 位数 (100000起步)
+        // 发号策略：6 位补零，从 000000 起步，自增不限上限
         if (!record) {
-          // 由于 autoincrement() 是系统强制控死行为，我们可先插入，然后如果 id 不合格就手动更新它，或者在此处直接走计数器表查询然后插入固定值。
-          // 最轻便做法：查一下表内现有的最大的 staticId，如果有，最大值 + 1；如果没有，就是 100000
+          // 查当前表内最大 staticId，有则 +1；无则从 0（即 "000000"）起步
           const maxRecord = await prisma.deviceRecord.aggregate({
             _max: { staticId: true }
           });
-          const nextStaticId = (maxRecord._max.staticId || 99999) + 1;
+          const nextStaticId = (maxRecord._max.staticId ?? -1) + 1;
 
           record = await prisma.deviceRecord.create({
             data: {
