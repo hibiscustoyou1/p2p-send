@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import TransferView from '../TransferView.vue';
 import { signalingService } from '@/services/socket';
+import { deviceManager } from '@/services/deviceManager';
 
 // Mock dependencies
 vi.mock('@/services/socket', () => ({
@@ -12,22 +13,52 @@ vi.mock('@/services/socket', () => ({
     onPeerJoined: vi.fn(),
     onPeerLeft: vi.fn(),
     onAuthVerified: vi.fn((cb) => cb({ staticId: '100 001', myDeviceId: 'dev-1' })),
+    offAuthVerified: vi.fn(),
     disconnect: vi.fn(),
+    // 关键：需要同时模拟 peerStaticId 和 peerDeviceId
+    // 这两个字段在 P2P 连接成功后决定了写入 trusted_devices 的设备 ID
+    peerStaticId: null as string | null,
+    peerDeviceId: null as string | null,
+    roomId: null as string | null,
   },
   getMyDeviceId: vi.fn(() => 'dev-mock-id')
 }));
 
+vi.mock('@/services/deviceManager', () => ({
+  deviceManager: {
+    upsertDevice: vi.fn(),
+  }
+}));
+
 vi.mock('@/services/webrtc', () => {
-  return {
-    WebRTCManager: class {
-      on = vi.fn();
-      init = vi.fn();
-      call = vi.fn();
-      close = vi.fn();
-      getChannel = vi.fn();
-    }
+  // 保存事件回调，以便测试中手动触发 stateChange
+  let stateChangeCallback: ((state: string) => void) | null = null;
+
+  const MockWebRTCManager = class {
+    on = vi.fn((event: string, cb: any) => {
+      if (event === 'stateChange') {
+        stateChangeCallback = cb;
+      }
+    });
+    init = vi.fn();
+    call = vi.fn();
+    close = vi.fn();
+    getChannel = vi.fn();
   };
+
+  // 暴露触发器供测试使用
+  (MockWebRTCManager as any).__triggerStateChange = (state: string) => {
+    if (stateChangeCallback) stateChangeCallback(state);
+  };
+
+  return { WebRTCManager: MockWebRTCManager };
 });
+
+// 辅助：获取 WebRTCManager mock 的触发器
+async function getWebRTCTrigger() {
+  const { WebRTCManager } = await import('@/services/webrtc');
+  return (WebRTCManager as any).__triggerStateChange as (state: string) => void;
+}
 
 describe('TransferView Component', () => {
 
@@ -35,6 +66,10 @@ describe('TransferView Component', () => {
     vi.clearAllMocks();
     vi.mocked(signalingService.connect).mockResolvedValue(undefined);
     vi.mocked(signalingService.joinRoom).mockResolvedValue({} as any);
+    // 重置对端信息
+    (signalingService as any).peerStaticId = null;
+    (signalingService as any).peerDeviceId = null;
+    (signalingService as any).roomId = null;
   });
 
   describe('套件 1: 初始化与断开状态渲染', () => {
@@ -101,9 +136,6 @@ describe('TransferView Component', () => {
       });
       await flushPromises();
 
-      // 这里直接获得 WebRTCManager 被构造后的 mock 实例中的 on 通道绑定
-      // 由于通过 vi.mock 构造的是一个 class 拦截，我们需要提取 on 绑定的事件处理函数
-      // 为了便于 TDD 我们这采取直接修改 vm 的响应式内部状态
       (wrapper.vm as any).connectionStatus = 'connected';
       (wrapper.vm as any).currentRole = 'sender';
       await flushPromises();
@@ -128,6 +160,93 @@ describe('TransferView Component', () => {
 
       // receiver 即便连接成功，它只是收东西，不能上传
       expect(wrapper.findComponent({ name: 'UploadZone' }).exists()).toBe(false);
+    });
+  });
+
+  // ===================================================================
+  // 【新增：核心回归测试套件 4】
+  // 覆盖 P2P 连接成功后 trusted_devices 的 ID 正确性
+  //
+  // 这是之前测试的最大盲区：
+  // 原有测试完全跳过了 WebRTC stateChange 回调，
+  // 也没有断言 upsertDevice 被调用，更没有验证传入了什么 ID。
+  // 正是这个漏洞导致"peerStaticId vs peerDeviceId"的 ID 不匹配 Bug
+  // 在测试中完全透明，只有浏览器手工复现才能发现。
+  // ===================================================================
+  describe('套件 4: P2P 连接成功后设备 ID 持久化（核心回归）', () => {
+    it('【关键】WebRTC 状态变为 connected 时，应以 peerDeviceId（UUID）而非 peerStaticId 写入 trusted_devices', async () => {
+      // 预设对端信息——模拟 SignalingService 握手后的真实状态
+      (signalingService as any).peerStaticId = '100 007';     // 静态短号（展示用）
+      (signalingService as any).peerDeviceId = 'dev_abc123';  // UUID（唯一索引，必须用这个）
+
+      const wrapper = mount(TransferView, {
+        global: {
+          stubs: { ConnectionPanel: true, UploadZone: true, TransferList: true, TransferCard: true }
+        }
+      });
+      await flushPromises();
+
+      // 通过 initWebRTCManager 绑定的 stateChange 回调，触发 'connected' 状态
+      const trigger = await getWebRTCTrigger();
+      trigger('connected');
+      await flushPromises();
+
+      // 【核心断言】必须调用 upsertDevice 且 id 字段是 UUID（而非静态短号）
+      expect(deviceManager.upsertDevice).toHaveBeenCalledOnce();
+      expect(deviceManager.upsertDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'dev_abc123', // ✅ UUID
+        })
+      );
+      // 反向确认：绝不能用短号作为唯一键
+      expect(deviceManager.upsertDevice).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: '100 007', // ❌ 静态短号
+        })
+      );
+    });
+
+    it('originalName 应使用可读的静态短号展示，而非 UUID', async () => {
+      (signalingService as any).peerStaticId = '100 007';
+      (signalingService as any).peerDeviceId = 'dev_abc123';
+
+      const wrapper = mount(TransferView, {
+        global: {
+          stubs: { ConnectionPanel: true, UploadZone: true, TransferList: true, TransferCard: true }
+        }
+      });
+      await flushPromises();
+
+      const trigger = await getWebRTCTrigger();
+      trigger('connected');
+      await flushPromises();
+
+      // originalName 应包含 peerStaticId（人类可读的展示名）
+      expect(deviceManager.upsertDevice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originalName: expect.stringContaining('100 007'),
+        })
+      );
+    });
+
+    it('若 peerDeviceId 为空（握手未完成），不应写入 trusted_devices', async () => {
+      // 模拟握手未完成：peerDeviceId 为 null
+      (signalingService as any).peerStaticId = '100 007';
+      (signalingService as any).peerDeviceId = null; // ← 未获取到 UUID
+
+      const wrapper = mount(TransferView, {
+        global: {
+          stubs: { ConnectionPanel: true, UploadZone: true, TransferList: true, TransferCard: true }
+        }
+      });
+      await flushPromises();
+
+      const trigger = await getWebRTCTrigger();
+      trigger('connected');
+      await flushPromises();
+
+      // guard 条件应阻止写入，防止以 null 作为 ID 污染数据库
+      expect(deviceManager.upsertDevice).not.toHaveBeenCalled();
     });
   });
 });
