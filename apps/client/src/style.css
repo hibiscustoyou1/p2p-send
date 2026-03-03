@@ -75,3 +75,47 @@
     background: rgba(59, 130, 246, 0.15);
     border-left: 3px solid #3B82F6;
 }
+
+/* ===== 主题切换圆圈扩散/聚拢动画 ===== */
+
+/* 浅→深：新画面从按钮圆心向外扩散覆盖 */
+@keyframes theme-ripple-expand {
+    from {
+        clip-path: circle(0px at var(--ripple-x) var(--ripple-y));
+    }
+
+    to {
+        clip-path: circle(var(--ripple-max-r) at var(--ripple-x) var(--ripple-y));
+    }
+}
+
+/* 深→浅：旧画面圆圈从外向内聚拢至按钮 */
+@keyframes theme-ripple-collapse {
+    from {
+        clip-path: circle(var(--ripple-max-r) at var(--ripple-x) var(--ripple-y));
+    }
+
+    to {
+        clip-path: circle(0px at var(--ripple-x) var(--ripple-y));
+    }
+}
+
+/* 浅→深：新画面执行扩散动画，置于顶层 */
+html[data-theme-direction="to-dark"]::view-transition-new(root) {
+    animation: theme-ripple-expand 0.6s cubic-bezier(0.25, 0, 0, 1) forwards;
+    z-index: 9999;
+}
+
+html[data-theme-direction="to-dark"]::view-transition-old(root) {
+    animation: none;
+}
+
+/* 深→浅：旧画面执行聚拢动画，新画面在下方静候 */
+html[data-theme-direction="to-light"]::view-transition-old(root) {
+    animation: theme-ripple-collapse 0.6s cubic-bezier(0.25, 0, 0, 1) forwards;
+    z-index: 9999;
+}
+
+html[data-theme-direction="to-light"]::view-transition-new(root) {
+    animation: none;
+}

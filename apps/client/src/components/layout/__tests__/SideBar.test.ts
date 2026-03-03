@@ -83,10 +83,22 @@ describe('SideBar Component - 主题切换引擎', () => {
     document.documentElement.classList.remove('dark');
     localStorage.clear();
     settingsManager.resetToDefaults();
+
+    // jsdom 不包含 startViewTransition，需手动注入以便 vi.spyOn 可以拦截
+    Object.defineProperty(document, 'startViewTransition', {
+      writable: true,
+      configurable: true,
+      value: (cb?: ViewTransitionUpdateCallback) => {
+        if (typeof cb === 'function') cb();
+        return { finished: Promise.resolve() } as ViewTransition;
+      },
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // 清理 data 属性，避免跨用例污染
+    delete document.documentElement.dataset.themeDirection;
   });
 
   it('没有缓存时应默认采用系统首选项 (亮色)', () => {
@@ -108,7 +120,13 @@ describe('SideBar Component - 主题切换引擎', () => {
     const toggleButton = wrapper.findAll('button').find(w => w.text().includes('切换主题'));
     expect(toggleButton).toBeDefined();
 
-    // 此时为光色，执行点击
+    // 拦截 startViewTransition，同步触发回调以便断言
+    vi.spyOn(document, 'startViewTransition').mockImplementation((cb) => {
+      if (typeof cb === 'function') cb();
+      return { finished: Promise.resolve() } as any;
+    });
+
+    // 此时为亮色，执行点击
     await toggleButton!.trigger('click');
 
     // 断言 DOM 与缓存
@@ -119,6 +137,53 @@ describe('SideBar Component - 主题切换引擎', () => {
     await toggleButton!.trigger('click');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(settingsManager.getSettings().theme).toBe('light');
+  });
+
+  it('点击切换主题后，startViewTransition 应被调用一次（浅→深）', async () => {
+    // 确保初始为亮色模式
+    settingsManager.updateSettings({ theme: 'light' });
+    const wrapper = createWrapper();
+    const toggleButton = wrapper.findAll('button').find(w => w.text().includes('切换主题'));
+    expect(toggleButton).toBeDefined();
+
+    // 拦截 startViewTransition，同步触发回调以便断言
+    vi.spyOn(document, 'startViewTransition').mockImplementation((cb) => {
+      if (typeof cb === 'function') cb();
+      return { finished: Promise.resolve() } as any;
+    });
+
+    await toggleButton!.trigger('click');
+
+    expect(document.startViewTransition).toHaveBeenCalledOnce();
+    // 切换方向为 to-dark，主题应已变为暗色
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('浏览器不支持 startViewTransition 时仍能正确切换主题（优雅降级）', async () => {
+    const original = document.startViewTransition;
+    // @ts-expect-error 模拟不支持 View Transition API 的旧版浏览器
+    delete document.startViewTransition;
+
+    settingsManager.updateSettings({ theme: 'light' });
+    const wrapper = createWrapper();
+    const toggleButton = wrapper.findAll('button').find(w => w.text().includes('切换主题'));
+    expect(toggleButton).toBeDefined();
+
+    await toggleButton!.trigger('click');
+
+    // 降级场景下 DOM 与持久化存储均应正确切换
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(settingsManager.getSettings().theme).toBe('dark');
+
+    // 恢复 API，避免污染后续测试
+    document.startViewTransition = original;
+  });
+
+  it('切换主题按钮应具有 data-testid="theme-toggle" 属性以支持精准定位', () => {
+    const wrapper = createWrapper();
+    const toggleButton = wrapper.find('button[data-testid="theme-toggle"]');
+    expect(toggleButton.exists()).toBe(true);
+    expect(toggleButton.text()).toContain('切换主题');
   });
 
 });

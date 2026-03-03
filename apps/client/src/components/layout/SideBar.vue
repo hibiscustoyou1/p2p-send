@@ -56,7 +56,7 @@
           <span class="text-sm font-medium">设置</span>
         </router-link>
 
-        <button @click="toggleTheme"
+        <button ref="themeToggleBtnRef" data-testid="theme-toggle" @click="toggleTheme"
           class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full text-left outline-none">
           <SvgIcon :name="isDarkMode ? 'light_mode' : 'dark_mode'" />
           <span class="text-sm font-medium">切换主题</span>
@@ -84,9 +84,44 @@ import SvgIcon from '@/components/common/SvgIcon.vue';
 import { settingsManager } from '@/services/settingsManager';
 
 const isDarkMode = ref(settingsManager.getSettings().theme === 'dark');
+const themeToggleBtnRef = ref<HTMLButtonElement | null>(null);
 
 const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value;
-  settingsManager.updateSettings({ theme: isDarkMode.value ? 'dark' : 'light' });
+  const btn = themeToggleBtnRef.value;
+  const nextDark = !isDarkMode.value;
+
+  // 计算按钮中心圆心坐标与屏幕最大覆盖半径
+  const rect = btn?.getBoundingClientRect();
+  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+  const maxR = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y)
+  );
+
+  // 将圆心坐标与半径写入 CSS 自定义变量，供 @keyframes 读取
+  const root = document.documentElement;
+  root.style.setProperty('--ripple-x', `${x}px`);
+  root.style.setProperty('--ripple-y', `${y}px`);
+  root.style.setProperty('--ripple-max-r', `${maxR}px`);
+  root.dataset.themeDirection = nextDark ? 'to-dark' : 'to-light';
+
+  // 优雅降级：浏览器不支持 View Transition API 时直接切换
+  if (!document.startViewTransition) {
+    isDarkMode.value = nextDark;
+    settingsManager.updateSettings({ theme: nextDark ? 'dark' : 'light' });
+    return;
+  }
+
+  // 触发圆圈扩散/聚拢过渡
+  const transition = document.startViewTransition(() => {
+    isDarkMode.value = nextDark;
+    settingsManager.updateSettings({ theme: nextDark ? 'dark' : 'light' });
+  });
+
+  // 动画结束后清理临时 data 属性
+  transition.finished.finally(() => {
+    delete root.dataset.themeDirection;
+  });
 };
 </script>
