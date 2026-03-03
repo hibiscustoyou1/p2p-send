@@ -1,5 +1,5 @@
 {
-  "name": "app-template",
+  "name": "p2p-send",
   "version": "1.0.0",
   "scripts": {
     "install:all": "pnpm i -r && pnpm build:shared",
@@ -14,9 +14,9 @@
     "db:gen": "dotenv -e .env -- pnpm --filter server prisma:gen",
     "vault:enc": "node scripts/vault.js encrypt",
     "vault:dec": "node scripts/vault.js decrypt",
-    "docker:build": "docker build --build-arg VAULT_PASS=$VAULT_PASS -t app-template .",
-    "docker:stop": "docker rm -f app-template | true",
-    "docker:run": "pnpm docker:stop && docker run -d -p 8030:80 -e VAULT_PASS=$VAULT_PASS --name app-template app-template"
+    "docker:build": "docker build --build-arg VAULT_PASS=$VAULT_PASS -t p2p-send .",
+    "docker:stop": "docker rm -f p2p-send | true",
+    "docker:run": "pnpm docker:stop && docker run -d -p 8030:80 -e VAULT_PASS=$VAULT_PASS --name p2p-send p2p-send"
   },
   "devDependencies": {
     "@repo/shared": "workspace:*",
