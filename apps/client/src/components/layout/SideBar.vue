@@ -1,22 +1,47 @@
 <template>
-  <aside
-    class="w-64 flex-shrink-0 flex flex-col justify-between bg-white dark:bg-surface-darker border-r border-slate-200 dark:border-slate-800 z-20 transition-colors duration-300">
+  <aside :class="[
+    // 桌面端：固定占位侧边栏（始终可见）
+    'w-64 flex-shrink-0 flex flex-col justify-between',
+    'bg-white dark:bg-surface-darker border-r border-slate-200 dark:border-slate-800',
+    'transition-colors duration-300',
+    // 移动端：固定定位抽屉，通过 translate 控制显隐
+    'fixed top-0 left-0 h-full z-50',
+    'md:relative md:translate-x-0 md:z-auto',
+    isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+    // 抽屉滑动过渡
+    'transition-transform duration-300 ease-in-out',
+  ]">
     <div class="flex flex-col gap-6 p-6">
-      <!-- Logo -->
-      <router-link to="/" class="flex flex-col cursor-pointer hover:opacity-80 transition-opacity outline-none">
-        <div class="flex items-center gap-2 mb-1">
-          <SvgIcon name="share_reviews" class="text-primary text-3xl" />
-          <h1 class="text-slate-900 dark:text-white text-xl font-bold tracking-tight">P2P 共享</h1>
-        </div>
-        <p class="text-slate-500 dark:text-slate-400 text-xs font-medium pl-1">安全控制台</p>
-      </router-link>
+      <!-- 顶部行：Logo + 移动端关闭按钮 -->
+      <div class="flex items-start justify-between">
+        <!-- Logo -->
+        <router-link to="/" class="flex flex-col cursor-pointer hover:opacity-80 transition-opacity outline-none"
+          @click="$emit('close')">
+          <div class="flex items-center gap-2 mb-1">
+            <SvgIcon name="share_reviews" class="text-primary text-3xl" />
+            <h1 class="text-slate-900 dark:text-white text-xl font-bold tracking-tight">P2P 共享</h1>
+          </div>
+          <p class="text-slate-500 dark:text-slate-400 text-xs font-medium pl-1">安全控制台</p>
+        </router-link>
+
+        <!-- 关闭按钮（仅移动端可见） -->
+        <button
+          class="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="关闭导航菜单" @click="$emit('close')">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       <!-- 主导航 -->
       <nav class="flex flex-col gap-2 mt-4">
         <router-link to="/"
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           exact-active-class="active-nav text-primary rounded-r-xl"
-          :class="[$route.path === '/' ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
+          :class="[$route.path === '/' ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']"
+          @click="$emit('close')">
           <SvgIcon name="swap_horiz" :class="$route.path === '/' ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">传输</span>
         </router-link>
@@ -24,7 +49,8 @@
         <router-link to="/history"
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           active-class="active-nav text-primary rounded-r-xl"
-          :class="[$route.path.startsWith('/history') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
+          :class="[$route.path.startsWith('/history') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']"
+          @click="$emit('close')">
           <SvgIcon name="history" :class="$route.path.startsWith('/history') ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">历史记录</span>
         </router-link>
@@ -32,7 +58,8 @@
         <router-link to="/devices"
           class="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer group outline-none"
           active-class="active-nav text-primary rounded-r-xl"
-          :class="[$route.path.startsWith('/devices') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']">
+          :class="[$route.path.startsWith('/devices') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl']"
+          @click="$emit('close')">
           <SvgIcon name="devices" :class="$route.path.startsWith('/devices') ? 'fill-current' : ''" />
           <span class="text-sm font-semibold">设备</span>
         </router-link>
@@ -51,7 +78,8 @@
         <router-link to="/settings"
           class="flex items-center gap-3 px-3 py-2 transition-colors cursor-pointer outline-none"
           active-class="active-nav text-primary rounded-r-xl"
-          :class="[$route.path.startsWith('/settings') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl']">
+          :class="[$route.path.startsWith('/settings') ? '' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl']"
+          @click="$emit('close')">
           <SvgIcon name="settings" :class="$route.path.startsWith('/settings') ? 'fill-current' : ''" />
           <span class="text-sm font-medium">设置</span>
         </router-link>
@@ -82,6 +110,15 @@
 import { ref } from 'vue';
 import SvgIcon from '@/components/common/SvgIcon.vue';
 import { settingsManager } from '@/services/settingsManager';
+
+// 接收移动端抽屉开关状态
+defineProps<{
+  isOpen?: boolean;
+}>();
+
+defineEmits<{
+  (e: 'close'): void;
+}>();
 
 const isDarkMode = ref(settingsManager.getSettings().theme === 'dark');
 const themeToggleBtnRef = ref<HTMLButtonElement | null>(null);

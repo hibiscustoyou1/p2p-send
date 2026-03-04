@@ -6,7 +6,7 @@
 
     <!-- ====== 空状态：等待连接（无任何 P2P 连接时占满剩余空间） ====== -->
     <div v-if="connectionStatus === 'disconnected'"
-      class="idle-container flex-1 flex flex-col items-center justify-center py-10 gap-10 select-none">
+      class="idle-container flex-1 flex flex-col items-center justify-center py-5 sm:py-10 gap-5 sm:gap-10 select-none">
 
       <!-- 雷达脉冲图区 -->
       <div class="radar-wrapper relative flex items-center justify-center">
@@ -38,7 +38,7 @@
       </div>
 
       <!-- 三步引导说明卡 -->
-      <div class="steps-grid grid grid-cols-3 gap-4 w-full max-w-2xl">
+      <div class="steps-grid grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-2xl">
         <div v-for="step in idleSteps" :key="step.num" class="step-card glass-panel rounded-xl p-4 flex flex-col gap-2.5
                  border border-slate-200/60 dark:border-slate-700/40
                  hover:border-primary/30 dark:hover:border-primary/40

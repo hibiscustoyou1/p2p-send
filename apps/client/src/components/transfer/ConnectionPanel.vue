@@ -18,16 +18,16 @@
     </div>
 
     <div
-      class="flex items-center gap-4 bg-slate-100/50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/50 w-full md:w-auto">
-      <div class="flex gap-2">
+      class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 bg-slate-100/50 dark:bg-slate-900/50 p-2 sm:p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/50 w-full md:w-auto">
+      <div class="flex gap-1.5 sm:gap-2 w-full sm:w-auto justify-between">
         <input v-for="(_, index) in inputCodes" :key="index" v-model="inputCodes[index]"
           :ref="(el) => inputs[index] = el as HTMLInputElement" @input="onInput($event, index)"
           @keydown.delete="onKeydown(index, $event)"
-          class="w-10 h-12 text-center bg-white dark:bg-slate-800 rounded-lg border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-lg focus:ring-primary focus:border-primary placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm outline-none"
+          class="flex-1 w-0 min-w-[2.25rem] max-w-[3rem] h-11 sm:h-12 text-center bg-white dark:bg-slate-800 rounded-lg border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-base md:text-lg focus:ring-primary focus:border-primary placeholder-slate-400 dark:placeholder-slate-600 transition-all shadow-sm outline-none"
           maxlength="1" placeholder="•" type="text" />
       </div>
       <button @click="handleConnect"
-        class="h-12 px-6 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold shadow-lg shadow-primary/25 transition-all flex items-center gap-2 outline-none">
+        class="flex-1 sm:flex-none w-full sm:w-auto justify-center h-11 sm:h-12 px-6 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold shadow-lg shadow-primary/25 transition-all flex items-center gap-2 outline-none">
         <span>连接</span>
         <SvgIcon name="arrow_forward" class="text-sm" />
       </button>

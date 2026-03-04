@@ -71,7 +71,7 @@ describe('DevicesView Component', () => {
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
         global: {
-          stubs: { SvgIcon: true, DeviceCard: true }
+          stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true }
         }
       });
       await flushPromises();
@@ -88,7 +88,7 @@ describe('DevicesView Component', () => {
 
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -107,7 +107,7 @@ describe('DevicesView Component', () => {
 
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -141,7 +141,7 @@ describe('DevicesView Component', () => {
     it('组件从 keep-alive 缓存再次激活时，应清空旧状态并重新发起在线查询', async () => {
       const { Wrapper, isVisible } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -182,7 +182,7 @@ describe('DevicesView Component', () => {
 
       const { Wrapper, isVisible } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -209,7 +209,7 @@ describe('DevicesView Component', () => {
     it('组件切离时（onDeactivated）必须清除监听器', async () => {
       const { Wrapper, isVisible } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -222,37 +222,54 @@ describe('DevicesView Component', () => {
   });
 
   describe('用户交互与组件事件', () => {
-    it('接收子组件抛出的 @edit 时应当弹窗 prompt 并更新 Alias', async () => {
-      vi.spyOn(window, 'prompt').mockReturnValue('My New PC');
-
+    it('接收子组件抛出的 @edit 时应当显示编辑 Modal 并能通过 Modal 确认更新 Alias', async () => {
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
       const devicesView = wrapper.findComponent(DevicesView);
-      (devicesView.vm as any).handleEdit('dev-1');
+      const editModal = devicesView.findComponent({ name: 'DeviceEditModal' });
 
-      expect(window.prompt).toHaveBeenCalledWith('编辑设备备注名:', 'Device 1');
+      // 1. 触发编辑
+      (devicesView.vm as any).handleEdit('dev-1');
+      await nextTick();
+
+      // 断言 Modal 显示
+      expect(editModal.props('isVisible')).toBe(true);
+      expect(editModal.props('deviceName')).toBe('Device 1');
+
+      // 2. 模拟 Modal 确认
+      editModal.vm.$emit('confirm', 'My New PC');
+      await nextTick();
+
       expect(deviceManager.updateDeviceAlias).toHaveBeenCalledWith('dev-1', 'My New PC');
-      // 初始化1次（onActivated）+ 重读1次（handleEdit 后）
+      // 初始化1次（onActivated）+ 重读1次（onEditConfirm 后）
       expect(deviceManager.getAllDevices).toHaveBeenCalledTimes(2);
     });
 
-    it('接收子组件抛出的 @remove 时应当 confirm 警告并删除数据', async () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-
+    it('接收子组件抛出的 @remove 时应当显示确认 Modal 并能通过 Modal 确认删除', async () => {
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
       const devicesView = wrapper.findComponent(DevicesView);
-      (devicesView.vm as any).handleRemove('dev-2');
+      const confirmModal = devicesView.findComponent({ name: 'DeviceConfirmModal' });
 
-      expect(window.confirm).toHaveBeenCalled();
+      // 1. 触发移除
+      (devicesView.vm as any).handleRemove('dev-2');
+      await nextTick();
+
+      // 断言 Modal 显示
+      expect(confirmModal.props('isVisible')).toBe(true);
+
+      // 2. 模拟 Modal 确认
+      confirmModal.vm.$emit('confirm');
+      await nextTick();
+
       expect(deviceManager.removeDevice).toHaveBeenCalledWith('dev-2');
       expect(deviceManager.getAllDevices).toHaveBeenCalledTimes(2);
     });
@@ -260,7 +277,7 @@ describe('DevicesView Component', () => {
     it('接收子组件抛出的 @send 时应当调用 router push 跳转传入 query 参数', async () => {
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
@@ -275,7 +292,7 @@ describe('DevicesView Component', () => {
     it('keep-alive 容器整体卸载时，必须触发 deactivated 清除监听器防止泄漏', async () => {
       const { Wrapper } = createKeepAliveWrapper();
       const wrapper = mount(Wrapper, {
-        global: { stubs: { SvgIcon: true, DeviceCard: true } }
+        global: { stubs: { SvgIcon: true, DeviceCard: true, DeviceEditModal: true, DeviceConfirmModal: true } }
       });
       await flushPromises();
 
