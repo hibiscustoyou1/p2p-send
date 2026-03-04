@@ -26,11 +26,15 @@ RUN pnpm build
 FROM node:20-slim
 
 RUN apt-get update && apt-get install -y nginx gettext-base && rm -rf /var/lib/apt/lists/*
+# 安装 Prisma CLI，用于容器启动时执行数据库迁移（migrate deploy）
+RUN npm install -g prisma@5.22.0
 
 WORKDIR /app
 
 COPY --from=builder /app/apps/server/dist ./server
 COPY --from=builder /app/.env.enc ./.env.enc
+# Prisma migrations：schema 已由 copy-deps.ts 放入 server/dist，migrations 须额外拷贝
+COPY --from=builder /app/apps/server/prisma/migrations ./prisma/migrations
 
 # 拷贝前端产物并立即修改所有权为 www-data
 COPY --from=builder /app/apps/client/dist /usr/share/nginx/html

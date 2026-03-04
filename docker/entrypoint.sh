@@ -9,9 +9,7 @@ envsubst '${NODE_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 # daemon off：让 nginx 不 fork 到后台，直接将日志输出到 stdout/stderr，与 docker logs 对接
 nginx -g 'daemon off;' &
 
-# 2. 启动 Node.js 服务
+# 2. 启动 Node.js 服务（内部在 loadSecureEnv 后自动执行 prisma migrate deploy）
 echo "Starting Node.js Server..."
-# 注意：这里路径取决于 Dockerfile 中的 WORKDIR 设置
 cd /app
-# 确保传入了 VAULT_PASS 环境变量用于解密配置
 node server/index.js
