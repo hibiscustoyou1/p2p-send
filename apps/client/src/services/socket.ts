@@ -14,7 +14,7 @@ import type {
 } from '@repo/shared';
 import { settingsManager } from './settingsManager';
 
-declare const API_PORT: string;
+declare const API_BASE_URL: string;
 
 /**
  * 获取或生成当前设备的长效物理指纹
@@ -31,7 +31,8 @@ export function getMyDeviceId(): string {
 // 单例模式，保证全局唯一的信令通道
 class SignalingService {
   public socket: Socket | null = null;
-  private serverUrl = `http://localhost:${API_PORT}`;
+  // 生产模式为空字符串，Socket.IO 自动使用当前页面 origin（由 Nginx 反代转发）
+  private serverUrl = API_BASE_URL;
   public roomId: string | null = null;
   public role: 'sender' | 'receiver' | null = null;
   public peerId: string | null = null;

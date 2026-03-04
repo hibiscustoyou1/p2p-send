@@ -42,7 +42,6 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
-ENV PORT=3000
 
 EXPOSE 80
 
