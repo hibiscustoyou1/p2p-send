@@ -49,6 +49,11 @@ ENV NODE_ENV=production
 # Node.js 监听端口，同时作为 nginx upstream 端口的唯一事实源
 # 可通过 docker run -e PORT=xxxx 覆盖
 ENV PORT=3030
+# 使用绝对路径，消除 prisma CLI（基于 schema 目录）与 PrismaClient（基于 CWD）
+# 对 file:./ 相对路径解析不一致的问题；可通过 docker run -e DATABASE_URL= 覆盖
+ENV DATABASE_URL="file:/app/data/prod.db"
+# 预创建数据库目录（Volume 挂载点）
+RUN mkdir -p /app/data
 
 EXPOSE 80
 
