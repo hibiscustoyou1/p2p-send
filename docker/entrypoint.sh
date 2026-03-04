@@ -6,11 +6,14 @@ echo "[Entrypoint] 正在解密配置..."
 node /app/vault.js decrypt
 
 # ── 步骤 2：将 .env 中所有变量导出到当前 shell 环境 ─────────────────────────
-# set -a 使后续赋值自动 export；. 读取文件；set +a 恢复默认
+# .env 中部分变量格式为 KEY = VALUE（等号两侧有空格），shell source 不识别
+# 用 sed 规范化为 KEY=VALUE 后再 source
+sed 's/ *= */=/g' /app/.env > /tmp/.env.normalized
 set -a
 # shellcheck disable=SC1091
-. /app/.env
+. /tmp/.env.normalized
 set +a
+rm -f /tmp/.env.normalized
 
 # ── 步骤 3：DATABASE_URL 路径规范化 ─────────────────────────────────────────
 # .env 中可保留 file:./db/dev.db（本地开发适用的相对路径）
