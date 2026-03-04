@@ -97,10 +97,46 @@ export function setupSocket(server: HttpServer) {
           }
         });
 
-        // 打出认证通行与长效指纹分发的最终包
+        // ======== 动态下发 WebRTC 穿透配置 (包含 TURN 时效签名支持) ========
+        let iceServers: any[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+        // 方案 1: 高级动态安全方案 - 基于 coturn 的 use-auth-secret 机制发号
+        const turnUrl = process.env.TURN_URL;
+        const turnSecret = process.env.TURN_SECRET;
+        if (turnUrl && turnSecret) {
+          const crypto = require('crypto'); // 此处仅在服务端连接发生时使用原生包
+          const ttlSeconds = 24 * 3600; // 票据 24 小时存活期
+          const timestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
+          // username 格式要求为: 时间戳:终端标识
+          const turnUsername = `${timestamp}:${clientUuid}`;
+          // HMAC-SHA1 签名
+          const hmac = crypto.createHmac('sha1', turnSecret);
+          hmac.update(turnUsername);
+          const turnCredential = hmac.digest('base64');
+
+          // 把我们通过自己秘钥计算出的限时通行证下发给客户端
+          iceServers.push({
+            urls: turnUrl,
+            username: turnUsername,
+            credential: turnCredential
+          });
+        }
+        // 方案 2: 向后兼容的静态 JSON 方案
+        else {
+          try {
+            if (process.env.ICE_SERVERS_JSON) {
+              iceServers = JSON.parse(process.env.ICE_SERVERS_JSON);
+            }
+          } catch (e) {
+            console.error('[WebRTC] ICE_SERVERS_JSON 解析失败:', e);
+          }
+        }
+
+        // 打出认证通行与长效指纹分发、冰山穿透凭证的最终包
         socket.emit(SocketEvent.AUTH_VERIFIED, {
           staticId: formattedStaticId,
-          myDeviceId: clientUuid
+          myDeviceId: clientUuid,
+          iceServers
         } as AuthVerifiedPayload);
 
       } catch (err) {

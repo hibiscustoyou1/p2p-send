@@ -40,6 +40,7 @@ class SignalingService {
   public peerDeviceId: string | null = null; // 对端的长效 UUID（用于设备刘在线状态查询的正确主键）
   private queuedListeners: Array<{ event: string, callback: any }> = [];
   public authPayload: AuthVerifiedPayload | null = null;
+  public iceServers: any[] = [{ urls: 'stun:stun.l.google.com:19302' }];
 
   /**
    * 建立与服务端的 Socket.io 链接
@@ -74,6 +75,10 @@ class SignalingService {
         // 内部静默截获一次鉴权响应以供单例生命周期缓存
         this.socket.on(SocketEvent.AUTH_VERIFIED, (payload: AuthVerifiedPayload) => {
           this.authPayload = payload;
+          if (payload.iceServers && payload.iceServers.length > 0) {
+            this.iceServers = payload.iceServers;
+            console.log('[Signaling] 已更新动态 WebRTC 穿透配置');
+          }
         });
 
         this._applyQueuedListeners();

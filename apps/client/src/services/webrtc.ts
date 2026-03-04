@@ -17,10 +17,8 @@ export class WebRTCManager {
 
   private listeners: { [K in keyof EventMap]?: Array<EventMap[K]> } = {};
 
-  // Google 提供的免费穿透测试服务器，以及如果需要的话可以放企业级 TURN
-  private iceServers: RTCIceServer[] = [
-    { urls: 'stun:stun.l.google.com:19302' },
-  ];
+  // 移除硬编码，改为在 init 时从 signalingService 提取
+  private iceServers: RTCIceServer[] = [];
 
   constructor(role: 'sender' | 'receiver') {
     this.role = role;
@@ -28,6 +26,7 @@ export class WebRTCManager {
 
   // 构建核心连接模型
   public init() {
+    this.iceServers = signalingService.iceServers as RTCIceServer[];
     this.peerConnection = new RTCPeerConnection({
       iceServers: this.iceServers
     });

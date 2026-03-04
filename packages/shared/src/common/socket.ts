@@ -182,4 +182,5 @@ export interface DeviceStatusChangedPayload {
 export interface AuthVerifiedPayload {
   staticId: string;    // 服务器派发的固定数字号码（包含空格等格式化风格）
   myDeviceId: string;  // 即上传的 UUID，如果因清理缓存找不回，也可以以此挂历
+  iceServers?: any[];  // 后端动态下发的 WebRTC 穿透服务器配置 (兼容 RTCIceServer 格式)
 }

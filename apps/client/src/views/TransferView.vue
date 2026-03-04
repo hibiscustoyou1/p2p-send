@@ -253,12 +253,16 @@ const onConnect = async (code: string) => {
 
     currentRole.value = 'receiver';
     connectionStatus.value = 'connecting';
-    deviceCode.value = code; // 同步当前锁定的连接码
+    // 移除对自身 deviceCode 的覆写
+    // deviceCode.value = code; 
 
     initWebRTCManager('receiver');
   } catch (err: any) {
     alert(`连接失败: ${err.message}`);
-    // 连接失败复原回原本页面状态 （需重新刷新逻辑这先从简略过）
+    // 恢复状态：若拨打失败，退回作为本端设备的自身大厅
+    currentRole.value = 'sender';
+    connectionStatus.value = 'disconnected';
+    signalingService.joinRoom(deviceCode.value.replace(/\s+/g, ''), 'sender').catch(e => console.error(e));
   }
 };
 
