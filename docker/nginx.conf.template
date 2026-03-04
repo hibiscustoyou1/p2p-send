@@ -25,9 +25,9 @@ http {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 
-    # 上游 Node.js 服务定义 (端口与 .env.enc 中的 PORT 保持一致)
+    # 上游 Node.js 服务定义：端口由启动时的环境变量 PORT 动态注入
     upstream node_backend {
-        server 127.0.0.1:3030;
+        server 127.0.0.1:${NODE_PORT};
     }
 
     server {
@@ -36,14 +36,14 @@ http {
 
         # 1. 静态资源代理 (Vue 前端)
         location / {
-            root   /usr/share/nginx/html; # 前端构建产物存放位置
+            root   /usr/share/nginx/html;
             index  index.html index.htm;
-            try_files $uri $uri/ /index.html; # 支持 Vue Router 的 History 模式
+            try_files $uri $uri/ /index.html;
         }
 
         # 2. API 接口代理 (Node 后端)
         location /api/ {
-            proxy_pass http://node_backend/api/; # 转发给本地 Node 进程
+            proxy_pass http://node_backend/api/;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';

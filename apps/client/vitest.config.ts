@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [vue()],
   define: {
-    API_PORT: '"3030"'
+    API_BASE_URL: '"http://localhost:3030"'
   },
   test: {
     environment: 'jsdom',

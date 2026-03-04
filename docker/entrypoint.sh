@@ -1,7 +1,11 @@
 #!/bin/sh
 
-# 1. 启动 Nginx (以后台模式运行)
-echo "Starting Nginx..."
+# 1. 根据环境变量 PORT 动态生成 nginx.conf（避免端口硬编码不同步）
+#    NODE_PORT 独立命名，防止与 nginx 内置变量冲突
+NODE_PORT=${PORT:-3030}
+export NODE_PORT
+echo "Starting Nginx (upstream port: ${NODE_PORT})..."
+envsubst '${NODE_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 nginx
 
 # 2. 启动 Node.js 服务

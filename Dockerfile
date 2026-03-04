@@ -25,7 +25,7 @@ RUN pnpm build
 
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y nginx gettext-base && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -36,12 +36,15 @@ COPY --from=builder /app/.env.enc ./.env.enc
 COPY --from=builder /app/apps/client/dist /usr/share/nginx/html
 RUN chown -R www-data:www-data /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
 
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
 
 COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
+# Node.js 监听端口，同时作为 nginx upstream 端口的唯一事实源
+# 可通过 docker run -e PORT=xxxx 覆盖
+ENV PORT=3030
 
 EXPOSE 80
 
